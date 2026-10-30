@@ -68,6 +68,12 @@ class DirectoryService:
         async with self._uow() as uow:
             return await resolve_class(uow, actor, class_name, school_name)
 
+    async def find_school_id(self, actor: Actor, school_name: str | None) -> int | None:
+        """The school a name refers to. For teachers and admins this is always their own school;
+        naming another school is refused. None = no school named (superadmin only)."""
+        async with self._uow() as uow:
+            return await resolve_school_id(uow, actor, school_name)
+
     async def get_roster(
         self, actor: Actor, class_name: str, school_name: str | None = None, include_inactive: bool = False
     ) -> ClassRoster:

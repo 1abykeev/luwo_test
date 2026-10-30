@@ -12,7 +12,7 @@ pydantic>=2.7
 pydantic-settings>=2.3
 
 # LLM
-anthropic>=0.40
+anthropic>=2.3
 
 # Auth
 pyjwt>=2.8
