@@ -1,0 +1,39 @@
+# Secrets: never commit
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+
+# Node / Expo (mobile app)
+node_modules/
+mobile/.expo/
+mobile/dist/
+mobile/web-build/
+*.log
+npm-debug.log*
+
+# Docker volumes / local DB data
+pgdata/
+
+# Load test output (keep the summary in README, not raw dumps)
+loadtest/results/*.csv
+loadtest/results/*.html
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
+
+# Claude Code local settings
+.claude/settings.local.json
