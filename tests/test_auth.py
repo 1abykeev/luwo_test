@@ -88,7 +88,7 @@ async def test_expired_token_is_rejected(client):
 
 
 async def test_token_signed_with_another_secret_is_rejected(client):
-    token = jwt.encode({"sub": str(user_id("root@luwo.test"))}, "some-other-secret", algorithm=ALGORITHM)
+    token = jwt.encode({"sub": str(user_id("root@luwo.test"))}, "some-other-secret-that-is-long-enough-0123456789", algorithm=ALGORITHM)
     assert (await client.get("/auth/me", headers=bearer(token))).status_code == 401
 
 
@@ -122,3 +122,29 @@ async def test_health_and_docs_are_public(client):
     assert (await client.get("/health")).json() == {"status": "ok"}
     assert (await client.get("/openapi.json")).status_code == 200
     assert (await client.get("/docs")).status_code == 200
+
+
+# ---- review fix #5: password hashing is slow on purpose and must not freeze the server ----
+
+async def test_login_does_not_block_the_event_loop(client):
+    import asyncio
+    import time
+
+    ticks: list[float] = []
+
+    async def ticker():
+        while True:
+            ticks.append(time.perf_counter())
+            await asyncio.sleep(0.005)
+
+    task = asyncio.create_task(ticker())
+    await asyncio.sleep(0.03)
+    started = time.perf_counter()
+    assert (await login(client)).status_code == 200
+    login_time = time.perf_counter() - started
+    await asyncio.sleep(0.03)  # let the ticker tick again, otherwise a freeze would not show up as a gap
+    task.cancel()
+
+    longest_freeze = max(b - a for a, b in zip(ticks, ticks[1:]))
+    assert login_time > 0.05, "bcrypt should take noticeable time, otherwise this test proves nothing"
+    assert longest_freeze < 0.05, f"the event loop froze for {longest_freeze:.3f}s during login"

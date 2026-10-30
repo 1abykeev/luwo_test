@@ -2,6 +2,7 @@
 
 import hashlib
 import hmac
+from datetime import timedelta
 
 from app.config import settings
 from app.domain.errors import Conflict, InvalidRequest
@@ -31,11 +32,25 @@ async def _propose(ctx: ToolContext, action: str, params: dict) -> ToolOutcome:
     return ToolOutcome(result, blocks=[card], kind="pending_confirmation")
 
 
+TOKEN_LIFETIME = timedelta(minutes=15)  # same as a pending confirmation
+
+
+def _signing_key() -> bytes:
+    """A key made for this one purpose from the app secret, so these tokens never share the JWT key itself."""
+    return hmac.new(settings.jwt_secret.encode(), b"luwo/namesake-token/v1", hashlib.sha256).digest()
+
+
+def _sign(ctx: ToolContext, kind: str, place_id: int, name: str, expires: int) -> str:
+    # The signature covers who asked, in which conversation, for whom, and until when.
+    message = f"{kind}:{ctx.actor.user_id}:{ctx.conversation_id}:{place_id}:{name.casefold()}:{expires}"
+    return hmac.new(_signing_key(), message.encode(), hashlib.sha256).hexdigest()[:24]
+
+
 def _override_token(ctx: ToolContext, kind: str, place_id: int, name: str) -> str:
-    """Proof that the model has seen a namesake conflict for exactly this person in this place.
-    Signed with a server secret, so the model cannot make one up."""
-    message = f"{kind}:{ctx.actor.user_id}:{place_id}:{name.casefold()}".encode()
-    return hmac.new(settings.jwt_secret.encode(), message, hashlib.sha256).hexdigest()[:24]
+    """Proof that the model has seen a namesake conflict for exactly this person, in this conversation,
+    in the last 15 minutes. Signed with a server secret, so the model cannot make one up."""
+    expires = int((ctx.now() + TOKEN_LIFETIME).timestamp())
+    return f"{expires}.{_sign(ctx, kind, place_id, name, expires)}"
 
 
 def _check_override(ctx: ToolContext, kind: str, place_id: int, name: str, given: str | None) -> bool:
@@ -46,8 +61,14 @@ def _check_override(ctx: ToolContext, kind: str, place_id: int, name: str, given
             "You received this token in the current message. Ask the user whether it is the same "
             "person or a different one; use the token only after they answer in a later message."
         )
-    if not hmac.compare_digest(given, _override_token(ctx, kind, place_id, name)):
+    expires_text, _, signature = given.partition(".")
+    genuine = expires_text.isdigit() and hmac.compare_digest(
+        signature, _sign(ctx, kind, place_id, name, int(expires_text))
+    )
+    if not genuine:
         raise InvalidRequest("This token does not belong to this person; do not invent tokens")
+    if ctx.now().timestamp() > int(expires_text):
+        raise InvalidRequest("This token has expired. Ask the user again whether it is a different person.")
     return True
 
 
@@ -142,7 +163,7 @@ async def confirm_pending_action(ctx: ToolContext, args: dict) -> ToolOutcome:
             "This change was proposed in the current message. Ask the user to confirm it first; "
             "you can only confirm after the user replies with a clear yes."
         )
-    outcome = await ctx.services.changes.confirm(ctx.actor, token, source="agent")
+    outcome = await ctx.services.changes.confirm(ctx.actor, token, source="agent", conversation_id=ctx.conversation_id)
     status = "already_done" if outcome.already_applied else "done"
     return ToolOutcome(
         {"status": status, "result": outcome.result},
@@ -152,7 +173,7 @@ async def confirm_pending_action(ctx: ToolContext, args: dict) -> ToolOutcome:
 
 
 async def cancel_pending_action(ctx: ToolContext, args: dict) -> ToolOutcome:
-    await ctx.services.changes.cancel(ctx.actor, str_arg(args, "token"))
+    await ctx.services.changes.cancel(ctx.actor, str_arg(args, "token"), conversation_id=ctx.conversation_id)
     return ToolOutcome(
         {"status": "cancelled", "note": "The change was NOT made."},
         blocks=[banner("info", "Cancelled")],

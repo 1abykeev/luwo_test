@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Luwo list agent: app design mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Tokens taken from luwo.ai's own stylesheet (lw-* colors, Oswald + Inter, pill shapes) */
+  :root {
+    --ink: #111a3c; --navy: #121d39; --indigo: #19284c; --steel: #235479;
+    --cyan: #01c3ff; --teal: #16abd9; --periwinkle: #7aa6ff; --sky: #b2deff; --fog: #e5edf2;
+    --white: #ffffff; --muted: #6b7a99; --line: #d5dfe8;
+    --ok: #00b981; --ok-bg: #ecfdf5; --err: #e40016; --err-bg: #fff0f1; --warn: #b7791f; --warn-bg: #fff7e6;
+    --display: "Oswald", "Arial Narrow", sans-serif; --body: "Inter", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--fog); font-family: var(--body); color: var(--ink); padding: 32px 24px 56px; }
+  h1.page { font-family: var(--display); letter-spacing: .04em; text-transform: uppercase; font-size: 28px; }
+  p.lead { color: var(--steel); margin: 6px 0 28px; max-width: 760px; line-height: 1.5; }
+  .row { display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start; }
+  figure { display: flex; flex-direction: column; gap: 10px; }
+  figcaption { font-family: var(--display); letter-spacing: .06em; text-transform: uppercase; font-size: 13px; color: var(--steel); }
+
+  .phone { width: 340px; height: 700px; background: var(--fog); border-radius: 40px; border: 8px solid var(--ink);
+           overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 18px 40px #111a3c33; position: relative; }
+  .status { height: 28px; background: var(--navy); color: #fff; font-size: 11px; display: flex; justify-content: space-between; align-items: center; padding: 0 22px; }
+
+  /* header */
+  .head { background: var(--navy); color: #fff; padding: 10px 16px 14px; display: flex; align-items: center; gap: 12px; }
+  .avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--cyan); color: var(--ink); font-family: var(--display);
+            font-weight: 600; display: grid; place-items: center; flex: none; letter-spacing: .03em; }
+  .head .who { flex: 1; min-width: 0; }
+  .head .name { font-weight: 600; font-size: 15px; }
+  .chip { display: inline-block; border-radius: 999px; padding: 2px 9px; font-size: 10.5px; letter-spacing: .04em; font-weight: 600; text-transform: uppercase; }
+  .chip.role { background: #ffffff1f; color: var(--sky); margin-top: 3px; }
+  .switch { width: 34px; height: 34px; border-radius: 50%; border: 1px solid #ffffff40; color: #fff; display: grid; place-items: center; font-size: 14px; }
+
+  /* chat area */
+  .chat { flex: 1; overflow: hidden; padding: 14px 12px; display: flex; flex-direction: column; gap: 10px; }
+  .bubble { max-width: 84%; padding: 10px 13px; border-radius: 20px; font-size: 14px; line-height: 1.45; }
+  .bubble.agent { background: var(--white); border-bottom-left-radius: 6px; align-self: flex-start; box-shadow: 0 1px 2px #111a3c14; }
+  .bubble.user { background: var(--indigo); color: #fff; border-bottom-right-radius: 6px; align-self: flex-end; }
+  .day { align-self: center; font-size: 10.5px; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; }
+
+  /* cards */
+  .card { background: var(--white); border-radius: 22px; padding: 14px; box-shadow: 0 1px 3px #111a3c18; align-self: stretch; }
+  .eyebrow { font-family: var(--display); font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--teal); font-weight: 500; }
+  .title { font-family: var(--display); font-size: 21px; letter-spacing: .03em; text-transform: uppercase; margin: 2px 0 8px; font-weight: 600; }
+  .li { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-top: 1px solid var(--line); font-size: 13.5px; }
+  .li:first-of-type { border-top: 0; }
+  .mini { width: 28px; height: 28px; border-radius: 50%; background: var(--sky); color: var(--steel); font-weight: 600; font-size: 11px; display: grid; place-items: center; flex: none; }
+  .li .grow { flex: 1; min-width: 0; }
+  .li small { color: var(--muted); display: block; font-size: 11.5px; }
+  .li.dim { opacity: .55; }
+  .chip.gray { background: var(--fog); color: var(--muted); }
+  .chip.warn { background: var(--warn-bg); color: var(--warn); }
+  .chip.lock { background: var(--fog); color: var(--steel); }
+  .teacher { margin-top: 8px; padding: 8px 10px; background: var(--fog); border-radius: 14px; font-size: 12.5px; color: var(--steel); }
+
+  /* selectable list */
+  .pick { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 16px; margin-top: 8px; font-size: 13.5px; }
+  .pick.sel { border-color: var(--cyan); background: #01c3ff14; }
+  .radio { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--line); flex: none; }
+  .pick.sel .radio { border-color: var(--cyan); background: radial-gradient(var(--cyan) 45%, transparent 48%); }
+
+  /* confirmation */
+  .confirm { border: 1.5px solid var(--cyan); }
+  .arrow { color: var(--teal); font-weight: 600; }
+  .warnbox { background: var(--warn-bg); color: var(--warn); border-radius: 14px; padding: 8px 10px; font-size: 12.5px; margin-top: 8px; }
+  .actions { display: flex; gap: 8px; margin-top: 12px; }
+  .btn { border-radius: 999px; padding: 11px 16px; font-family: var(--display); letter-spacing: .08em; text-transform: uppercase; font-weight: 600; font-size: 13px; text-align: center; flex: 1; }
+  .btn.primary { background: var(--cyan); color: var(--ink); }
+  .btn.ghost { border: 1.5px solid var(--line); color: var(--steel); flex: .7; }
+  .ttl { font-size: 11px; color: var(--muted); margin-top: 8px; text-align: center; }
+
+  /* banners */
+  .banner { display: flex; gap: 10px; align-items: flex-start; border-radius: 18px; padding: 11px 13px; font-size: 13px; line-height: 1.4; }
+  .banner b { display: block; font-family: var(--display); letter-spacing: .06em; text-transform: uppercase; font-size: 12px; margin-bottom: 1px; }
+  .banner.ok { background: var(--ok-bg); color: #006b4a; border: 1px solid #b9f8cf; }
+  .banner.err { background: var(--err-bg); color: var(--err); border: 1px solid #ffc9cd; }
+  .ico { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; flex: none; color: #fff; }
+  .banner.ok .ico { background: var(--ok); } .banner.err .ico { background: var(--err); }
+
+  /* timeline */
+  .tl { margin-top: 6px; padding-left: 4px; }
+  .step { display: flex; gap: 10px; font-size: 13px; padding: 6px 0; position: relative; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--cyan); margin-top: 5px; flex: none; position: relative; }
+  .step:not(:last-child) .dot::after { content: ""; position: absolute; left: 4px; top: 12px; width: 2px; height: 24px; background: var(--line); }
+  .step small { color: var(--muted); display: block; font-size: 11.5px; }
+
+  /* composer */
+  .suggest { display: flex; gap: 6px; padding: 0 12px 8px; overflow: hidden; }
+  .suggest span { white-space: nowrap; border: 1.5px solid var(--line); background: #fff; color: var(--steel); border-radius: 999px; padding: 6px 12px; font-size: 12px; font-weight: 500; }
+  .composer { background: #fff; padding: 10px 12px 18px; display: flex; gap: 8px; align-items: center; border-top: 1px solid var(--line); }
+  .composer .input { flex: 1; background: var(--fog); border-radius: 999px; padding: 11px 16px; font-size: 14px; color: var(--muted); }
+  .send { width: 42px; height: 42px; border-radius: 50%; background: var(--cyan); color: var(--ink); display: grid; place-items: center; font-weight: 700; }
+
+  /* login */
+  .login { background: var(--navy); color: #fff; flex: 1; padding: 54px 26px 24px; display: flex; flex-direction: column; }
+  .logo { font-family: var(--display); font-size: 52px; letter-spacing: .12em; font-weight: 700; line-height: 1; }
+  .logo i { color: var(--cyan); font-style: normal; }
+  .tag { font-family: var(--display); letter-spacing: .12em; color: var(--sky); font-size: 13px; margin-top: 8px; text-transform: uppercase; }
+  .field { background: var(--indigo); border: 1.5px solid #ffffff22; border-radius: 999px; padding: 14px 20px; margin-top: 12px; font-size: 14px; color: #ffffffa6; }
+  .login .btn { margin-top: 18px; flex: none; padding: 15px; font-size: 15px; }
+  .demo { margin-top: auto; }
+  .demo .eyebrow { color: var(--periwinkle); }
+  .demo .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .demo .chips span { border-radius: 999px; padding: 7px 14px; background: #ffffff14; font-size: 12.5px; color: var(--sky); font-weight: 500; }
+  .kawaii { text-align: center; margin-top: 22px; color: #ffffff66; font-size: 13px; }
+
+  .notes { margin-top: 36px; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; max-width: 1180px; }
+  .note { background: #fff; border-radius: 22px; padding: 18px; }
+  .note h3 { font-family: var(--display); letter-spacing: .06em; text-transform: uppercase; font-size: 15px; margin-bottom: 8px; }
+  .note p, .note li { font-size: 13.5px; line-height: 1.55; color: #36456a; }
+  .note ul { padding-left: 18px; }
+  .sw { display: inline-block; width: 14px; height: 14px; border-radius: 50%; vertical-align: -2px; margin-right: 6px; border: 1px solid #0001; }
+</style>
+</head>
+<body>
+<h1 class="page">Luwo list agent: app design</h1>
+<p class="lead">Mockup of the mobile chat. Colors, fonts and shapes follow luwo.ai (navy and cyan, Oswald headings with
+"// LABEL" style captions, pill buttons, soft large radii). The five screens show every card the backend can return.</p>
+
+<div class="row">
+
+  <!-- 1. LOGIN -->
+  <figure>
+    <div class="phone">
+      <div class="status"><span>9:41</span><span>●●● 5G</span></div>
+      <div class="login">
+        <div class="logo">LUW<i>O</i></div>
+        <div class="tag">// Поддержка списков</div>
+        <div style="height:46px"></div>
+        <div class="eyebrow" style="color:var(--periwinkle)">// Вход</div>
+        <div class="field">aigul@luwo.test</div>
+        <div class="field">••••••••</div>
+        <div class="btn primary">Войти</div>
+        <div class="demo">
+          <div class="eyebrow">// Демо-пользователи</div>
+          <div class="chips"><span>Учитель</span><span>Другой учитель</span><span>Админ школы</span><span>Суперадмин</span></div>
+        </div>
+        <div class="kawaii">(˶˃ᆺ˂˶) я ИИ-ассистент</div>
+      </div>
+    </div>
+    <figcaption>1 · Вход и демо-пользователи</figcaption>
+  </figure>
+
+  <!-- 2. TEACHER: class roster -->
+  <figure>
+    <div class="phone">
+      <div class="status"><span>9:41</span><span>●●● 5G</span></div>
+      <div class="head">
+        <div class="avatar">АС</div>
+        <div class="who"><div class="name">Айгуль Садыкова</div><span class="chip role">Учитель · Лицей №1 · 4А</span></div>
+        <div class="switch">⇄</div>
+      </div>
+      <div class="chat">
+        <div class="day">Сегодня</div>
+        <div class="bubble user">Покажите список учеников 4А</div>
+        <div class="bubble agent">В классе 4А сейчас пять учеников. Эрмек Бакиров удалён из класса 10 дней назад.</div>
+        <div class="card">
+          <div class="eyebrow">// Класс 4А · Лицей №1</div>
+          <div class="title">5 учеников</div>
+          <div class="li"><div class="mini">АЖ</div><div class="grow">Амир Жумаев</div></div>
+          <div class="li"><div class="mini">АК</div><div class="grow">Амир Касымов</div></div>
+          <div class="li"><div class="mini">БА</div><div class="grow">Бермет Алиева</div></div>
+          <div class="li"><div class="mini">ЖС</div><div class="grow">Жанара Сатыбалдиева</div></div>
+          <div class="li"><div class="mini">КУ</div><div class="grow">Касым Усенов</div></div>
+        </div>
+      </div>
+      <div class="suggest"><span>Найти ученика</span><span>Добавить ученика</span><span>Куда пропал ученик?</span></div>
+      <div class="composer"><div class="input">Напишите сообщение…</div><div class="send">↑</div></div>
+    </div>
+    <figcaption>2 · Список класса (учитель)</figcaption>
+  </figure>
+
+  <!-- 3. CHOOSE + CONFIRM -->
+  <figure>
+    <div class="phone">
+      <div class="status"><span>9:41</span><span>●●● 5G</span></div>
+      <div class="head">
+        <div class="avatar">АС</div>
+        <div class="who"><div class="name">Айгуль Садыкова</div><span class="chip role">Учитель · Лицей №1 · 4А</span></div>
+        <div class="switch">⇄</div>
+      </div>
+      <div class="chat">
+        <div class="bubble user">Удалите Амира из моего класса</div>
+        <div class="bubble agent">В 4А два Амира. Кого удалить?</div>
+        <div class="card">
+          <div class="eyebrow">// Выберите ученика</div>
+          <div class="pick"><div class="radio"></div><div>Амир Жумаев<small style="display:block;color:var(--muted);font-size:11.5px">4А</small></div></div>
+          <div class="pick sel"><div class="radio"></div><div>Амир Касымов<small style="display:block;color:var(--muted);font-size:11.5px">4А</small></div></div>
+        </div>
+        <div class="card confirm">
+          <div class="eyebrow">// Подтвердите действие</div>
+          <div class="title">Удалить из класса</div>
+          <div class="li"><div class="mini">АК</div><div class="grow">Амир Касымов<small>4А · запись сохранится в истории</small></div></div>
+          <div class="actions"><div class="btn primary">Подтвердить</div><div class="btn ghost">Отмена</div></div>
+          <div class="ttl">Действует 15 минут</div>
+        </div>
+      </div>
+      <div class="composer"><div class="input">Напишите сообщение…</div><div class="send">↑</div></div>
+    </div>
+    <figcaption>3 · Выбор ученика и подтверждение</figcaption>
+  </figure>
+
+  <!-- 4. ADMIN: overview + bulk transfer + success -->
+  <figure>
+    <div class="phone">
+      <div class="status"><span>9:41</span><span>●●● 5G</span></div>
+      <div class="head">
+        <div class="avatar">СР</div>
+        <div class="who"><div class="name">Салтанат Рыскулова</div><span class="chip role">Админ школы · Лицей №1</span></div>
+        <div class="switch">⇄</div>
+      </div>
+      <div class="chat">
+        <div class="bubble user">Переведите остальных из 4А в 4Б</div>
+        <div class="card confirm">
+          <div class="eyebrow">// Подтвердите действие</div>
+          <div class="title">Перевод в 4Б</div>
+          <div class="li"><div class="mini">АЖ</div><div class="grow">Амир Жумаев</div><span class="arrow">4А → 4Б</span></div>
+          <div class="li"><div class="mini">АК</div><div class="grow">Амир Касымов</div><span class="arrow">4А → 4Б</span></div>
+          <div class="li"><div class="mini">+3</div><div class="grow">ещё 3 ученика</div><span class="arrow">4А → 4Б</span></div>
+          <div class="actions"><div class="btn primary">Подтвердить</div><div class="btn ghost">Отмена</div></div>
+        </div>
+        <div class="banner ok"><div class="ico">✓</div><div><b>Готово</b>5 учеников переведены в 4Б</div></div>
+        <div class="card">
+          <div class="eyebrow">// Классы школы</div>
+          <div class="li"><div class="mini">4А</div><div class="grow">Айгуль Садыкова<small>0 учеников</small></div></div>
+          <div class="li"><div class="mini">4Б</div><div class="grow">Нурлан Ибраев<small>9 учеников</small></div></div>
+          <div class="li"><div class="mini">3А</div><div class="grow">Бакыт Осмонов<small>6 учеников</small></div></div>
+        </div>
+      </div>
+      <div class="composer"><div class="input">Напишите сообщение…</div><div class="send">↑</div></div>
+    </div>
+    <figcaption>4 · Админ: перевод, успех, классы с учителями</figcaption>
+  </figure>
+
+  <!-- 5. MISSING STUDENT + DENIED -->
+  <figure>
+    <div class="phone">
+      <div class="status"><span>9:41</span><span>●●● 5G</span></div>
+      <div class="head">
+        <div class="avatar">АС</div>
+        <div class="who"><div class="name">Айгуль Садыкова</div><span class="chip role">Учитель · Лицей №1 · 4А</span></div>
+        <div class="switch">⇄</div>
+      </div>
+      <div class="chat">
+        <div class="bubble user">У меня нет Алины в списке, а раньше была</div>
+        <div class="bubble agent">Нашла Алину Назарову: её перевели из 4А в другой класс. Какой именно — вам не видно. Вернуть её сможет администратор школы.</div>
+        <div class="card">
+          <div class="eyebrow">// Что показывают записи</div>
+          <div class="title">Алина Назарова</div>
+          <div class="tl">
+            <div class="step"><div class="dot"></div><div>Добавлена в 4А<small>31 августа</small></div></div>
+            <div class="step"><div class="dot"></div><div>Переведена из 4А <span class="chip lock">🔒 класс скрыт</span><small>27 октября</small></div></div>
+          </div>
+        </div>
+        <div class="bubble user">Покажи 4А в Гимназии №5</div>
+        <div class="banner err"><div class="ico">!</div><div><b>Нет доступа</b>Вы видите только свою школу, Лицей №1</div></div>
+      </div>
+      <div class="composer"><div class="input">Напишите сообщение…</div><div class="send">↑</div></div>
+    </div>
+    <figcaption>5 · «Куда пропал ученик» и отказ по правам</figcaption>
+  </figure>
+</div>
+
+<div class="notes">
+  <div class="note">
+    <h3>Палитра (с luwo.ai)</h3>
+    <ul>
+      <li><span class="sw" style="background:#121d39"></span>navy #121d39: шапка, вход</li>
+      <li><span class="sw" style="background:#19284c"></span>indigo #19284c: пузыри пользователя</li>
+      <li><span class="sw" style="background:#01c3ff"></span>cyan #01c3ff: главная кнопка, акценты</li>
+      <li><span class="sw" style="background:#16abd9"></span>teal #16abd9: подписи «// …»</li>
+      <li><span class="sw" style="background:#b2deff"></span>sky #b2deff: аватары, подсветка</li>
+      <li><span class="sw" style="background:#e5edf2"></span>fog #e5edf2: фон чата</li>
+      <li><span class="sw" style="background:#00b981"></span>emerald #00b981: успех</li>
+      <li><span class="sw" style="background:#e40016"></span>red #e40016: ошибка и отказ</li>
+    </ul>
+  </div>
+  <div class="note">
+    <h3>Шрифты и формы</h3>
+    <p>Заголовки и подписи: <b>Oswald</b> прописными с «// ПОДПИСЬ», как на сайте. Текст: <b>Inter</b>.
+    Кнопки и поля: полностью скруглённые «таблетки». Карточки и пузыри: радиус 20–22.
+    Эмотикон (˶˃ᆺ˂˶) из голоса бренда используем только в одном месте: на экране входа.</p>
+  </div>
+  <div class="note">
+    <h3>Что видно на экранах</h3>
+    <ul>
+      <li>История сообщений, карточки списков, учителя класса</li>
+      <li>Выбор ученика из нескольких одноимённых</li>
+      <li>Подтверждение с кнопками и сроком действия</li>
+      <li>Успех (зелёный), отказ по правам (красный)</li>
+      <li>Скрытый класс помечен замком, а не называется</li>
+      <li>Смена демо-пользователя кнопкой ⇄ в шапке</li>
+    </ul>
+  </div>
+</div>
+</body>
+</html>

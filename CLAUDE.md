@@ -175,3 +175,22 @@ README.md
 - At the end of each day, give a short summary: what was done, how to run/try it, what is left, and a few questions an interviewer might ask about that part.
 - Explain in plain English. When introducing a concept (repository, interface, service, idempotency), give a one-line plain explanation or an analogy.
 - Aktan sometimes wants to run installs and long commands himself. When he says "don't run commands", only write files and tell him what to run.
+
+## Deferred review items (from the first code review) — REMIND THE USER when the trigger happens
+
+Claude: at each trigger below, tell Aktan "time to check deferred item X" before moving on. Do not silently skip them, and do not do them early without measuring.
+
+| # | Item | When to check | What to do |
+|---|---|---|---|
+| 7 | Chat history is limited by message count (40), not tokens; big tool results (rosters up to 60 students) inflate tokens per conversation | Day 4, after the real-Claude load run, when "tokens per conversation" numbers exist | If tokens per conversation grow with chat length, cap or summarize old tool results; re-measure |
+| 8 | N+1 queries in `DirectoryService.list_classes` (one student count per class) and `list_teachers` (one query per teacher) | Day 4, after the fake-LLM load run, if DB p95 looks high | Add batch repository methods (counts per class, classes per teacher); re-measure |
+| 10 | Structured logging with `conversation_id`, request_log writes, DB latency hooks | Day 3 Block B (not deferred, it is planned) | Hook points: LLM call (`agent.py`), `ToolRegistry.execute`, unit-of-work enter/exit or SQLAlchemy engine events, `ChatResult` |
+| 11 | `app/main.py` calls `create_app()` at import time (builds the container and Claude client on import) | Day 4 cleanup, if time | App factory / lifespan |
+| 12 | DB pool size is fixed (10+10) in `app/db/session.py` | Day 4, before the load test | Make configurable; record the value used in the README |
+| 14 | `trim_history` edge case: last N messages all tool exchanges | Day 4 cleanup | Add a test; make sure it never returns a history that starts with a tool result |
+| 15b | No rate limit or per-user concurrency cap on `/chat` | Day 4, mention in README limitations at least | Optional simple per-user limit |
+| R1 | Residual risk (accepted): the model could confirm a pending action in a LATER message without a real user "yes". Mitigations in code: same conversation only, same user only, 15-minute expiry, history logs source=agent. Buttons are the only fully user-driven path | Day 4, README "Security" section | Document honestly; optionally make buttons the only confirm path |
+| L1 | `ruff` and `mypy` are not installed | Day 4 cleanup, ask Aktan | `pip install ruff mypy`, run, fix what is cheap |
+
+### Review fixes already done (first code review)
+#1 honest text after model failure, #2 fake button results (structural fix + prompt rule, measured 12/12), #3 namesake token (key, conversation, expiry) and confirm bound to conversation, #4 per-conversation lock + DB row lock, #5 bcrypt in a thread, #6 secret guard (`APP_ENV`), #15a overall request deadline. Closed after checking: #9 (false alarm, test added), #13 (works, measured). Tests: 331.

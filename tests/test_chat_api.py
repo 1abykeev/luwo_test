@@ -26,12 +26,12 @@ def model(request):
         data = json.loads(last.tool_results[0].content)
         if data.get("status") == "pending_confirmation":
             return text_response("Добавить ученика? Подтвердите.")
+        if data.get("status") in ("done", "already_done"):  # the backend's answer to the Confirm button
+            return text_response("Готово, ученик добавлен.")
         if "error" in data:
             return text_response("Не получилось: " + data["message"])
         return text_response("Вот список.")
     text = last.text
-    if text.startswith("SYSTEM EVENT"):
-        return text_response("Готово, ученик добавлен.")
     if "список" in text:
         return tool_response("list_class_students", {"class_name": "4А"})
     if "добавь" in text.lower():

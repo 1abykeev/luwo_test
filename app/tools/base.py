@@ -3,11 +3,13 @@
 import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
+from datetime import datetime
 
 from app.agent.llm import ToolCall, ToolSpec
 from app.domain.errors import DomainError, InvalidRequest
 from app.domain.models import Actor
 from app.services import Services
+from app.services.changes import utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +26,7 @@ class ToolContext:
     proposals_this_turn: set[str] = field(default_factory=set)
     # Same rule for namesake overrides: a token issued in this request can't be used in it.
     override_tokens_this_turn: set[str] = field(default_factory=set)
+    now: Callable[[], datetime] = utc_now  # a parameter so tests can move time
 
 
 @dataclass

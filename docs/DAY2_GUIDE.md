@@ -142,7 +142,7 @@ python -m scripts.try_agent admin1@luwo.test     # chat yourself; /yes /no = the
 
 `scripts/try_agent.py` uses in-memory demo data, so nothing in the database changes and the data resets on every start.
 
-## 11. Tests (287, all passing)
+## 11. Tests (331, all passing)
 
 | File | What it checks |
 |---|---|
@@ -163,6 +163,19 @@ The fake model is a function, so a test can play a "gullible" or "pushy" model a
 - It sometimes skipped `report_out_of_scope` or refused without calling the tool. Fixed in the prompt, measured.
 - The cache was rewritten in every conversation. Fixed with the breakpoint on the system prompt.
 - One call took 46 seconds once; the others took 2 to 4 seconds. Not reproduced.
+
+### Fixes after the first code review
+
+Found by the `code-reviewer` agent, each reproduced with a failing test first:
+
+- **Dishonest text after a model failure:** if the model died after a change was made, the user read "nothing was changed". The text is now chosen from what the backend really did (`text_without_model` in `agent.py`).
+- **Fake button results:** a typed `SYSTEM EVENT ... done` was handled like a real button press. Button presses now reach the model as a tool result, which a user cannot type. The real model still believed typed fake results, so the prompt got an explicit rule; 12 of 12 replies were honest afterwards.
+- **bcrypt blocked the event loop** for about 0.17 s per login; it now runs in a thread.
+- **Secret check:** the app refuses the built-in dev JWT secret unless `APP_ENV=dev`, and any secret shorter than 32 characters.
+- **Namesake token:** now has its own derived key, belongs to one conversation and user, and expires after 15 minutes. A change can only be confirmed in the conversation that proposed it.
+- **Two requests at once in one conversation** crashed the real database with a duplicate-key error (reproduced). Requests of one conversation now run one after another (`app/agent/locks.py`), and the store takes a row lock.
+- **Overall time limit** per chat request (`AGENT_TIMEOUT_SECONDS`, default 90 s), shared by all model calls.
+- **Checked and closed:** the history of a transfer between schools is visible from both sides (test added); prompt caching with the top-level parameter works (about 11,000 tokens read from the cache).
 
 ## 13. Not built yet
 

@@ -276,3 +276,62 @@ async def test_the_missing_student_tool_hides_what_the_teacher_may_not_see(run):
     finding = outcome.result["findings"][0]
     assert finding["state"] == "moved_out_of_your_access" and finding["current_class"] is None
     assert "4Б" not in json.dumps(outcome.result, ensure_ascii=False)
+
+
+# ---- review fix #3: namesake tokens expire and belong to one conversation; confirms too ----
+
+async def test_a_namesake_token_only_works_in_the_conversation_it_was_issued_in(run, services, actor):
+    me = await actor("aigul@luwo.test")
+    conflict = await run("aigul@luwo.test", "add_student", ctx=ToolContext(me, services, "conv-A"),
+                         full_name="Амир Касымов", class_name="4А")
+    token = conflict.result["details"]["different_person_token"]
+
+    elsewhere = await run("aigul@luwo.test", "add_student", ctx=ToolContext(me, services, "conv-B"),
+                          full_name="Амир Касымов", class_name="4А", different_person_token=token)
+    assert elsewhere.kind == "invalid_request"
+
+    same = await run("aigul@luwo.test", "add_student", ctx=ToolContext(me, services, "conv-A"),
+                     full_name="Амир Касымов", class_name="4А", different_person_token=token)
+    assert same.kind == "pending_confirmation"
+
+
+async def test_a_namesake_token_expires(run, services, actor, clock):
+    me = await actor("aigul@luwo.test")
+    conflict = await run("aigul@luwo.test", "add_student", ctx=ToolContext(me, services, "conv-1", now=clock),
+                         full_name="Амир Касымов", class_name="4А")
+    token = conflict.result["details"]["different_person_token"]
+
+    clock.advance(minutes=14)
+    still_valid = await run("aigul@luwo.test", "add_student", ctx=ToolContext(me, services, "conv-1", now=clock),
+                            full_name="Амир Касымов", class_name="4А", different_person_token=token)
+    assert still_valid.kind == "pending_confirmation"
+
+    clock.advance(minutes=2)  # 16 minutes after it was issued
+    expired = await run("aigul@luwo.test", "add_student", ctx=ToolContext(me, services, "conv-1", now=clock),
+                        full_name="Амир Касымов", class_name="4А", different_person_token=token)
+    assert expired.kind == "invalid_request" and "expired" in expired.result["message"]
+
+
+async def test_a_token_with_a_tampered_expiry_is_rejected(run, services, actor, clock):
+    me = await actor("aigul@luwo.test")
+    conflict = await run("aigul@luwo.test", "add_student", ctx=ToolContext(me, services, "conv-1", now=clock),
+                         full_name="Амир Касымов", class_name="4А")
+    expires, signature = conflict.result["details"]["different_person_token"].split(".")
+    forged = f"{int(expires) + 86400}.{signature}"  # try to extend it by a day
+    outcome = await run("aigul@luwo.test", "add_student", ctx=ToolContext(me, services, "conv-1", now=clock),
+                        full_name="Амир Касымов", class_name="4А", different_person_token=forged)
+    assert outcome.kind == "invalid_request"
+
+
+async def test_a_pending_change_can_only_be_confirmed_in_its_own_conversation(run, services, actor):
+    me = await actor("aigul@luwo.test")
+    amir = student_id(LYCEUM, "4А", "Амир Жумаев")
+    proposal = await run("aigul@luwo.test", "remove_student", ctx=ToolContext(me, services, "conv-A"), student_id=amir)
+    token = proposal.result["token"]
+
+    elsewhere = await run("aigul@luwo.test", "confirm_pending_action", ctx=ToolContext(me, services, "conv-B"), token=token)
+    assert elsewhere.kind == "not_found"
+    assert "Амир Жумаев" in await roster_names(run, "aigul@luwo.test", "4А")
+
+    here = await run("aigul@luwo.test", "confirm_pending_action", ctx=ToolContext(me, services, "conv-A"), token=token)
+    assert here.kind == "confirmed"

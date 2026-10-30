@@ -50,8 +50,11 @@ class ChangeService:
             await uow.commit()
         return Proposal(pending.token, action, plan.summary, plan.details, plan.warnings, pending.expires_at)
 
-    async def confirm(self, actor: Actor, token: str, source: str = "agent") -> ConfirmResult:
-        """Run a pending change. The token can only be used once.
+    async def confirm(
+        self, actor: Actor, token: str, source: str = "agent", conversation_id: str | None = None
+    ) -> ConfirmResult:
+        """Run a pending change. The token can only be used once. If `conversation_id` is given, the
+        change must have been proposed in that same conversation.
 
         Claiming the token, re-checking, changing the data and writing history all happen in
         one transaction. If anything fails, the claim is rolled back with everything else."""
@@ -59,6 +62,8 @@ class ChangeService:
             pending = await uow.pending.get(token)
             # Someone else's token looks exactly like a token that doesn't exist.
             if pending is None or pending.actor_user_id != actor.user_id:
+                raise NotFound("Unknown confirmation request")
+            if conversation_id is not None and pending.conversation_id != conversation_id:
                 raise NotFound("Unknown confirmation request")
 
             claimed = await uow.pending.claim(token, self._clock())
@@ -78,10 +83,12 @@ class ChangeService:
             await uow.commit()
         return ConfirmResult(result, already_applied=False)
 
-    async def cancel(self, actor: Actor, token: str) -> None:
+    async def cancel(self, actor: Actor, token: str, conversation_id: str | None = None) -> None:
         async with self._uow() as uow:
             pending = await uow.pending.get(token)
             if pending is None or pending.actor_user_id != actor.user_id:
+                raise NotFound("Unknown confirmation request")
+            if conversation_id is not None and pending.conversation_id != conversation_id:
                 raise NotFound("Unknown confirmation request")
             if not await uow.pending.cancel(token):
                 raise Conflict(f"This request was already {pending.status}")

@@ -422,3 +422,28 @@ async def test_removing_a_teacher_unassigns_their_classes(services, actor):
 
     with pytest.raises(PermissionDenied):
         await services.actors.load(user_id("nurlan@luwo.test"))
+
+
+# ---- review item #9 (checked): history of a transfer between schools, seen from both sides ----
+
+async def test_both_schools_can_follow_a_student_who_moved_between_schools(services, actor):
+    root = await actor("root@luwo.test")
+    ruslan = student_id(LYCEUM, "3А", "Руслан Мамытов")
+    proposal = await services.changes.propose(
+        root, "transfer_students", {"student_ids": [ruslan], "to_class_id": class_id(GYMNASIUM, "3Б")}
+    )
+    await services.changes.confirm(root, proposal.token)
+
+    # The receiving school (Gymnasium) sees the arrival, but not the name of a class in another school
+    receiving = await services.students.get_student(await actor("admin2@luwo.test"), ruslan)
+    transfer = next(e for e in receiving.events if e.action == "student_transferred")
+    assert transfer.to_class == "3Б" and transfer.from_class is None
+    assert receiving.student.class_name == "3Б" and receiving.school_name == GYMNASIUM
+
+    # The sending school (Lyceum) can no longer open the card, but "where did he go?" still answers
+    lyceum_admin = await actor("admin1@luwo.test")
+    with pytest.raises(NotFound):
+        await services.students.get_student(lyceum_admin, ruslan)
+    findings = await services.students.investigate_missing_student(lyceum_admin, "Мамытов")
+    assert [(f.state, f.current_class) for f in findings] == [("moved_out_of_your_access", None)]
+    assert any(e.action == "student_transferred" and e.from_class == "3А" for e in findings[0].events)

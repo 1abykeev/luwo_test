@@ -100,3 +100,52 @@ def test_trimming_never_starts_in_the_middle_of_a_tool_exchange():
     trimmed = trim_history(history, 6)  # would start at index 6 = a tool call: skip to the next typed message
     assert trimmed[0] == Message("user", "question 3") and len(trimmed) == 4
     assert all(not (m.role == "user" and m.tool_results) for m in trimmed[:1])
+
+
+# ---- review fix #4: two writers at once on one conversation ----
+
+async def test_simultaneous_appends_all_succeed_and_keep_a_clean_order(store):
+    import asyncio
+
+    await store.append("c_race", AIGUL, [StoredMessage(Message("user", "start"))])
+    await asyncio.gather(*[
+        store.append("c_race", AIGUL, [StoredMessage(Message("user", f"m{i}")), StoredMessage(Message("assistant", f"a{i}"))])
+        for i in range(8)
+    ])
+    loaded = await store.load("c_race", AIGUL)
+    texts = [m.message.text for m in loaded]
+
+    assert len(loaded) == 1 + 8 * 2 and len(set(texts)) == len(texts)
+    # each writer's two messages stay together and in order
+    for i in range(8):
+        assert texts.index(f"a{i}") == texts.index(f"m{i}") + 1
+
+
+async def test_simultaneous_first_messages_of_a_new_conversation(store):
+    import asyncio
+
+    await asyncio.gather(*[
+        store.append("c_new_race", AIGUL, [StoredMessage(Message("user", f"first{i}"))]) for i in range(5)
+    ])
+    assert len(await store.load("c_new_race", AIGUL)) == 5
+
+
+# ---- the per-conversation lock cleans up after itself ----
+
+async def test_the_conversation_lock_forgets_finished_conversations():
+    import asyncio
+
+    from app.agent.locks import KeyedLock
+
+    locks = KeyedLock()
+    order = []
+
+    async def work(name, pause):
+        async with locks.hold("c_1"):
+            order.append(f"{name} start")
+            await asyncio.sleep(pause)
+            order.append(f"{name} end")
+
+    await asyncio.gather(work("a", 0.02), work("b", 0))
+    assert order == ["a start", "a end", "b start", "b end"]  # one at a time, in arrival order
+    assert len(locks) == 0  # nothing is kept for conversations nobody is using

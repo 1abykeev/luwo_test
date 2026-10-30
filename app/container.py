@@ -37,5 +37,8 @@ def build_conversation_store() -> ConversationStore:
 def build_app() -> tuple[Services, Agent]:
     """Everything the API needs, wired once. The services and the agent share one data source."""
     services = build_services(build_uow_factory())
-    agent = Agent(build_llm_client(), build_registry(), services, build_conversation_store())
+    agent = Agent(
+        build_llm_client(), build_registry(), services, build_conversation_store(),
+        deadline_seconds=settings.agent_timeout_seconds,
+    )
     return services, agent

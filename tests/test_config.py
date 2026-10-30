@@ -1,0 +1,28 @@
+"""Review fix #6: the app must not start with the built-in development secret outside development."""
+
+import pytest
+
+from app.config import DEV_JWT_SECRET, Settings
+
+
+def settings(**kwargs) -> Settings:
+    return Settings(_env_file=None, **kwargs)  # ignore the developer's .env so the test is predictable
+
+
+def test_the_development_secret_is_fine_in_development():
+    assert settings(app_env="dev").jwt_secret == DEV_JWT_SECRET
+
+
+@pytest.mark.parametrize("env", ["production", "staging", "anything-but-dev"])
+def test_the_development_secret_is_refused_everywhere_else(env):
+    with pytest.raises(ValueError, match="JWT_SECRET"):
+        settings(app_env=env)
+
+
+def test_a_real_secret_is_accepted_in_production():
+    assert settings(app_env="production", jwt_secret="k" * 40).app_env == "production"
+
+
+def test_a_short_secret_is_refused_even_in_development():
+    with pytest.raises(ValueError, match="32"):
+        settings(app_env="dev", jwt_secret="too-short")

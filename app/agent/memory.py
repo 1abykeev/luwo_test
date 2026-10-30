@@ -97,8 +97,12 @@ class PostgresConversationStore:
             await session.execute(
                 insert(m.Conversation).values(id=conversation_id, user_id=user_id).on_conflict_do_nothing()
             )
+            # FOR UPDATE: a second writer waits here until this transaction ends, so two requests can
+            # never pick the same message position (also across several server instances).
             owner = (
-                await session.execute(select(m.Conversation.user_id).where(m.Conversation.id == conversation_id))
+                await session.execute(
+                    select(m.Conversation.user_id).where(m.Conversation.id == conversation_id).with_for_update()
+                )
             ).scalar_one()
             if owner != user_id:
                 raise _unknown()

@@ -1,3 +1,5 @@
+import asyncio
+
 from app.domain.errors import AuthenticationFailed
 from app.domain.models import User
 from app.repositories.interfaces import UnitOfWorkFactory
@@ -18,7 +20,8 @@ class AuthService:
             user = await uow.users.get_by_email(email.strip().lower())
 
         password_hash = user.password_hash if user and user.password_hash else _DUMMY_HASH
-        password_ok = verify_password(password, password_hash)
+        # bcrypt is slow on purpose (about 0.2 s); in a thread it cannot freeze every other request
+        password_ok = await asyncio.to_thread(verify_password, password, password_hash)
         # One message for every failure: unknown email, wrong password, removed account.
         if not (user and user.password_hash and password_ok and user.is_active):
             raise AuthenticationFailed("Wrong email or password")

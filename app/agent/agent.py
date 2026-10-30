@@ -12,6 +12,7 @@ until it answers in plain text.
               answer + cards for the app
 """
 
+import asyncio
 import json
 import logging
 import time
@@ -25,9 +26,10 @@ from app.services import Services
 from app.tools import ToolContext, ToolOutcome, ToolRegistry
 from app.tools.base import banner
 
+from .locks import KeyedLock
 from .llm import LLMClient, LLMError, LLMRequest, Message, ToolCall, ToolResult, Usage
 from .memory import ConversationStore, StoredMessage, trim_history
-from .prompt import SYSTEM_EVENT_PREFIX, build_system_prompt
+from .prompt import build_system_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -40,9 +42,29 @@ LLM_DOWN_TEXT = (
     "Попробуйте ещё раз через минуту.\n"
     "I can't reach the AI model right now, so nothing was changed. Please try again in a minute."
 )
+TIMEOUT_TEXT = (
+    "Запрос занял слишком много времени, поэтому ничего не изменено. Попробуйте ещё раз.\n"
+    "The request took too long, so nothing was changed. Please try again."
+)
 GAVE_UP_TEXT = (
     "Не получилось довести запрос до конца. Проверьте списки и попробуйте сформулировать запрос иначе.\n"
     "I could not finish this request. Please check the lists and try to rephrase it."
+)
+# What to say when the model cannot answer but we KNOW what the backend did (review fix #1). The text must
+# match the facts: a change that was made may not be reported as "nothing was changed".
+CHANGE_MADE_TEXT = (
+    "Изменение выполнено, результат на карточке ниже. Подробный ответ написать не удалось: ИИ-модель сейчас недоступна.\n"
+    "The change was made; the result is on the card below. I could not write a fuller reply because the AI model is unavailable."
+)
+CHANGE_CANCELLED_TEXT = (
+    "Изменение отменено, данные не менялись. Подробный ответ написать не удалось: ИИ-модель сейчас недоступна.\n"
+    "The change was cancelled and nothing was modified. I could not write a fuller reply because the AI model is unavailable."
+)
+PROPOSAL_PENDING_TEXT = (
+    "Изменение подготовлено, но ещё НЕ выполнено. Подтвердите или отмените его на карточке ниже. "
+    "Подробный ответ написать не удалось: ИИ-модель сейчас недоступна.\n"
+    "The change is prepared but NOT done yet. Confirm or cancel it on the card below. "
+    "I could not write a fuller reply because the AI model is unavailable."
 )
 REFUSAL_TEXT = "С этим я помочь не могу.\nI can't help with that."
 EMPTY_TEXT = "Не получилось сформулировать ответ, попробуйте ещё раз.\nI could not put an answer together, please try again."
@@ -60,6 +82,19 @@ class ChatResult:
     llm_calls: int
     duration_ms: int
     extras: dict = field(default_factory=dict)
+
+
+def text_without_model(records: list[ToolRecord], default: str) -> str:
+    """The message for a request where the model could not finish. It is chosen from what the
+    backend really did, so it can never say "nothing was changed" after a change was made."""
+    kinds = {r.kind for r in records}
+    if "confirmed" in kinds:
+        return CHANGE_MADE_TEXT
+    if "cancelled" in kinds:
+        return CHANGE_CANCELLED_TEXT
+    if "pending_confirmation" in kinds:
+        return PROPOSAL_PENDING_TEXT
+    return default
 
 
 def new_conversation_id() -> str:
@@ -86,7 +121,7 @@ def display_history(items: list[StoredMessage]) -> list[dict]:
     shown = []
     for item in items:
         m = item.message
-        if m.role == "user" and (m.tool_results or m.text.startswith(SYSTEM_EVENT_PREFIX)):
+        if m.role == "user" and m.tool_results:
             continue
         if m.role == "assistant" and (m.tool_calls or not m.text):
             continue
@@ -100,50 +135,56 @@ def display_history(items: list[StoredMessage]) -> list[dict]:
 class Agent:
     def __init__(
         self, llm: LLMClient, registry: ToolRegistry, services: Services, store: ConversationStore,
-        max_steps: int = MAX_STEPS,
+        max_steps: int = MAX_STEPS, deadline_seconds: float = 90.0,
     ):
         self._llm = llm
         self._registry = registry
         self._services = services
         self.store = store  # also used by the history endpoint
         self._max_steps = max_steps
+        self._deadline_seconds = deadline_seconds
+        self._conversation_locks = KeyedLock()
 
     # ---- the two ways a turn starts ----
 
     async def chat(self, actor: Actor, text: str, conversation_id: str | None = None) -> ChatResult:
         """The user typed a message. conversation_id=None starts a new conversation; an id the
         server did not create for this user is refused, so clients cannot invent ids."""
-        if conversation_id is None:
-            conversation_id, stored = new_conversation_id(), []
-        else:
+        conversation_id_given = conversation_id is not None
+        conversation_id = conversation_id or new_conversation_id()
+        async with self._conversation_locks.hold(conversation_id):  # one request at a time per conversation
             stored = await self.store.load(conversation_id, actor.user_id)  # NotFound if not theirs
-            if not stored:
+            if not stored and conversation_id_given:
                 raise NotFound("Unknown conversation")
-        return await self._run(actor, conversation_id, stored, [StoredMessage(Message("user", text))], [], [])
+            return await self._run(actor, conversation_id, stored, [StoredMessage(Message("user", text))], [], [])
 
     async def press_button(self, actor: Actor, conversation_id: str, token: str, approve: bool) -> ChatResult:
         """The user pressed Confirm or Cancel on a card. The backend acts first; the model only
         puts the result into words."""
-        stored = await self.store.load(conversation_id, actor.user_id)
-        if not stored:
-            raise NotFound("Unknown conversation")
+        async with self._conversation_locks.hold(conversation_id):
+            stored = await self.store.load(conversation_id, actor.user_id)
+            if not stored:
+                raise NotFound("Unknown conversation")
 
-        tool = "confirm_pending_action" if approve else "cancel_pending_action"
-        started = time.perf_counter()
-        ctx = ToolContext(actor, self._services, conversation_id)
-        outcome = await self._registry.execute(ctx, ToolCall("button", tool, {"token": token}))
-        record = ToolRecord(tool, self._registry.request_type(tool), outcome.kind, outcome.is_error,
-                            int((time.perf_counter() - started) * 1000))
+            tool = "confirm_pending_action" if approve else "cancel_pending_action"
+            started = time.perf_counter()
+            ctx = ToolContext(actor, self._services, conversation_id)
+            outcome = await self._registry.execute(ctx, ToolCall("button", tool, {"token": token}))
+            record = ToolRecord(tool, self._registry.request_type(tool), outcome.kind, outcome.is_error,
+                                int((time.perf_counter() - started) * 1000))
 
-        button = "Confirm" if approve else "Cancel"
-        event = (
-            f"{SYSTEM_EVENT_PREFIX} (sent by the app, not typed by the user): the user pressed the "
-            f"{button} button. Backend result (kind={outcome.kind}): "
-            f"{json.dumps(outcome.result, ensure_ascii=False, default=str)}"
-        )
-        return await self._run(
-            actor, conversation_id, stored, [StoredMessage(Message("user", event))], [record], [outcome.blocks]
-        )
+            # The button press reaches the model as a tool call plus its result. A user can type any text,
+            # but cannot create a tool result, so a typed "SYSTEM EVENT ... done" can never pass for this.
+            call = ToolCall(f"button_{uuid.uuid4().hex[:12]}", tool, {"token": token})
+            result = {**outcome.result,
+                      "note": f"The user pressed the {'Confirm' if approve else 'Cancel'} button in the app."}
+            exchange = [
+                StoredMessage(Message("assistant", "", tool_calls=(call,))),
+                StoredMessage(Message("user", tool_results=(
+                    ToolResult(call.id, json.dumps(result, ensure_ascii=False, default=str), outcome.is_error),
+                ))),
+            ]
+            return await self._run(actor, conversation_id, stored, exchange, [record], [outcome.blocks])
 
     # ---- the loop ----
 
@@ -160,12 +201,24 @@ class Agent:
         usage, llm_calls, failed = Usage(), 0, False
         final_text = ""
 
+        deadline = time.monotonic() + self._deadline_seconds  # one budget for ALL the model calls of this request
         for _ in range(self._max_steps):
             try:
-                response = await self._llm.complete(LLMRequest(system, messages, self._registry.specs))
-            except LLMError as error:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise TimeoutError
+                response = await asyncio.wait_for(
+                    self._llm.complete(LLMRequest(system, messages, self._registry.specs)), timeout=remaining
+                )
+            except TimeoutError:
+                error = LLMError("timeout", "The request took too long")
+                response = None
+            except LLMError as llm_error:
+                error, response = llm_error, None
+            if response is None:
                 logger.error("Model call failed: %s (%s)", error.message, error.kind)
-                failed, final_text = True, LLM_DOWN_TEXT
+                default = TIMEOUT_TEXT if error.kind == "timeout" else LLM_DOWN_TEXT
+                failed, final_text = True, text_without_model(records, default)
                 step_blocks.append([banner("error", error.message, f"llm_{error.kind}")])
                 break
             llm_calls += 1
@@ -195,7 +248,7 @@ class Agent:
             if blocks_this_step:
                 step_blocks.append(blocks_this_step)
         else:
-            failed, final_text = True, GAVE_UP_TEXT
+            failed, final_text = True, text_without_model(records, GAVE_UP_TEXT)
             step_blocks.append([banner("error", "The request could not be completed", "too_many_steps")])
 
         blocks = select_blocks(step_blocks)
