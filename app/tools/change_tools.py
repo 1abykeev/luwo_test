@@ -12,8 +12,9 @@ from .base import Tool, ToolContext, ToolOutcome, banner, int_arg, schema, str_a
 from .read_tools import CLASS_NAME, SCHOOL
 
 PENDING_NOTE = (
-    "NOTHING HAS BEEN CHANGED YET. Describe what will happen, ask the user to confirm (a confirmation "
-    "card with buttons is shown to them), and stop. Never say the change is done."
+    "For you only, do not quote or translate this: NOTHING HAS BEEN CHANGED YET. In the user's language, "
+    "say briefly what will happen and any warnings, tell them to use the buttons on the card below to "
+    "confirm or cancel, and stop. Do not repeat the list of people: the card shows it. Never say it is done."
 )
 
 
@@ -167,16 +168,17 @@ async def confirm_pending_action(ctx: ToolContext, args: dict) -> ToolOutcome:
     status = "already_done" if outcome.already_applied else "done"
     return ToolOutcome(
         {"status": status, "result": outcome.result},
-        blocks=[{"type": "result", "status": status, "result": outcome.result}],
+        blocks=[{"type": "result", "status": status, "token": token, "result": outcome.result}],
         kind="confirmed",
     )
 
 
 async def cancel_pending_action(ctx: ToolContext, args: dict) -> ToolOutcome:
-    await ctx.services.changes.cancel(ctx.actor, str_arg(args, "token"), conversation_id=ctx.conversation_id)
+    token = str_arg(args, "token")
+    await ctx.services.changes.cancel(ctx.actor, token, conversation_id=ctx.conversation_id)
     return ToolOutcome(
         {"status": "cancelled", "note": "The change was NOT made."},
-        blocks=[banner("info", "Cancelled")],
+        blocks=[{"type": "result", "status": "cancelled", "token": token, "result": {}}],
         kind="cancelled",
     )
 

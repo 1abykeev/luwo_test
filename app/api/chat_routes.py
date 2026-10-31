@@ -28,7 +28,7 @@ BLOCKS = """
 | `duplicates` | namesakes | `groups[{name, students}]` |
 | `investigation` | "where did the student go" | `findings[{student_id, full_name, state, current_class, history}]` |
 | `confirmation` | a change waits for the user | `token`, `summary`, `details`, `warnings`, `expires_at` → show Confirm / Cancel buttons that call `POST /chat/confirm` |
-| `result` | a change was made | `status` (`done` / `already_done`), `result` |
+| `result` | a change was made, was already made, or was cancelled | `status` (`done` / `already_done` / `cancelled`), `token` (of the confirmation it answers), `result` |
 | `banner` | an error or notice | `level` (`error` / `info`), `message`, `code` |
 """
 

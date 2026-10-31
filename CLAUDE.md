@@ -184,8 +184,8 @@ Claude: at each trigger below, tell Aktan "time to check deferred item X" before
 |---|---|---|---|
 | 7 | Chat history is limited by message count (40), not tokens; big tool results (rosters up to 60 students) inflate tokens per conversation | Day 4, after the real-Claude load run, when "tokens per conversation" numbers exist | If tokens per conversation grow with chat length, cap or summarize old tool results; re-measure |
 | 8 | N+1 queries in `DirectoryService.list_classes` (one student count per class) and `list_teachers` (one query per teacher) | Day 4, after the fake-LLM load run, if DB p95 looks high | Add batch repository methods (counts per class, classes per teacher); re-measure |
-| 10 | Structured logging with `conversation_id`, request_log writes, DB latency hooks | Day 3 Block B (not deferred, it is planned) | Hook points: LLM call (`agent.py`), `ToolRegistry.execute`, unit-of-work enter/exit or SQLAlchemy engine events, `ChatResult` |
-| 11 | `app/main.py` calls `create_app()` at import time (builds the container and Claude client on import) | Day 4 cleanup, if time | App factory / lifespan |
+| 10 | ~~Structured logging with `conversation_id`, request_log writes, DB latency hooks~~ **DONE on Day 3** (Observer/Telemetry, structlog, Prometheus, request_log, DB engine hook) | - | - |
+| 11 | ~~`app/main.py` calls `create_app()` at import time~~ **DONE on Day 3**: `app` is now created lazily (module `__getattr__`), so importing `app.main` has no side effects | - | - |
 | 12 | DB pool size is fixed (10+10) in `app/db/session.py` | Day 4, before the load test | Make configurable; record the value used in the README |
 | 14 | `trim_history` edge case: last N messages all tool exchanges | Day 4 cleanup | Add a test; make sure it never returns a history that starts with a tool result |
 | 15b | No rate limit or per-user concurrency cap on `/chat` | Day 4, mention in README limitations at least | Optional simple per-user limit |
@@ -194,3 +194,8 @@ Claude: at each trigger below, tell Aktan "time to check deferred item X" before
 
 ### Review fixes already done (first code review)
 #1 honest text after model failure, #2 fake button results (structural fix + prompt rule, measured 12/12), #3 namesake token (key, conversation, expiry) and confirm bound to conversation, #4 per-conversation lock + DB row lock, #5 bcrypt in a thread, #6 secret guard (`APP_ENV`), #15a overall request deadline. Closed after checking: #9 (false alarm, test added), #13 (works, measured). Tests: 331.
+
+### Day 3 status (done)
+Mobile app (Expo SDK 58, Expo Router, 77 tests, lint and types clean), analytics endpoint, structured logs, Prometheus metrics, Grafana dashboard (24 panels, all queries verified on real data), DAY3_GUIDE. Backend tests: 389. Prompt tuned from real UI screenshots (language, picker, no repeated lists, rights questions); language guard in `app/agent/language.py`.
+Verified by Aktan by hand on the iOS simulator (iPhone 17, Expo Go): login, class list, 'where did she go' card. Android not tried. All flows were verified in the browser build.
+Day 4 reminders still open: #7, #8, #12, #14, #15b, R1, L1 (see the table above). Numbers to carry into Day 4: ~12k tokens per chat request, 98% cache share when warm, agent p50 ~2.5 s / p95 ~4.7 s in a short warm-up, RSS ~160 MB.

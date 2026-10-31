@@ -335,3 +335,22 @@ async def test_a_pending_change_can_only_be_confirmed_in_its_own_conversation(ru
 
     here = await run("aigul@luwo.test", "confirm_pending_action", ctx=ToolContext(me, services, "conv-A"), token=token)
     assert here.kind == "confirmed"
+
+
+# ---- the mobile app needs to match a result card to its confirmation card after a reload ----
+
+async def test_result_cards_carry_the_token_of_the_confirmation_they_answer(run):
+    proposal = await run("aigul@luwo.test", "add_student", full_name="Новый Ученик", class_name="4А")
+    token = proposal.result["token"]
+    done = await run("aigul@luwo.test", "confirm_pending_action", token=token)
+    assert done.blocks == [{"type": "result", "status": "done", "token": token, "result": done.result["result"]}]
+
+    again = await run("aigul@luwo.test", "confirm_pending_action", token=token)
+    assert again.blocks[0]["status"] == "already_done" and again.blocks[0]["token"] == token
+
+
+async def test_a_cancelled_change_is_a_result_card_too(run):
+    proposal = await run("aigul@luwo.test", "add_student", full_name="Новый Ученик", class_name="4А")
+    token = proposal.result["token"]
+    cancelled = await run("aigul@luwo.test", "cancel_pending_action", token=token)
+    assert cancelled.blocks == [{"type": "result", "status": "cancelled", "token": token, "result": {}}]

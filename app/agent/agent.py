@@ -22,11 +22,13 @@ from dataclasses import dataclass, field
 from app.domain.errors import NotFound
 from app.domain.models import Actor
 from app.observability.classification import ToolRecord, classify
+from app.observability.telemetry import NullObserver, Observer
 from app.services import Services
 from app.tools import ToolContext, ToolOutcome, ToolRegistry
 from app.tools.base import banner
 
 from .locks import KeyedLock
+from .language import drop_foreign_preamble
 from .llm import LLMClient, LLMError, LLMRequest, Message, ToolCall, ToolResult, Usage
 from .memory import ConversationStore, StoredMessage, trim_history
 from .prompt import build_system_prompt
@@ -135,7 +137,7 @@ def display_history(items: list[StoredMessage]) -> list[dict]:
 class Agent:
     def __init__(
         self, llm: LLMClient, registry: ToolRegistry, services: Services, store: ConversationStore,
-        max_steps: int = MAX_STEPS, deadline_seconds: float = 90.0,
+        max_steps: int = MAX_STEPS, deadline_seconds: float = 90.0, observer: Observer | None = None,
     ):
         self._llm = llm
         self._registry = registry
@@ -144,6 +146,7 @@ class Agent:
         self._max_steps = max_steps
         self._deadline_seconds = deadline_seconds
         self._conversation_locks = KeyedLock()
+        self._observer: Observer = observer or NullObserver()  # logs, metrics, request log
 
     # ---- the two ways a turn starts ----
 
@@ -153,44 +156,53 @@ class Agent:
         conversation_id_given = conversation_id is not None
         conversation_id = conversation_id or new_conversation_id()
         async with self._conversation_locks.hold(conversation_id):  # one request at a time per conversation
-            stored = await self.store.load(conversation_id, actor.user_id)  # NotFound if not theirs
-            if not stored and conversation_id_given:
-                raise NotFound("Unknown conversation")
-            return await self._run(actor, conversation_id, stored, [StoredMessage(Message("user", text))], [], [])
+            with self._observer.request_scope(conversation_id, actor.user_id):
+                stored = await self.store.load(conversation_id, actor.user_id)  # NotFound if not theirs
+                if not stored and conversation_id_given:
+                    raise NotFound("Unknown conversation")
+                if not conversation_id_given:
+                    self._observer.conversation_started(conversation_id)
+                return await self._run(
+                    actor, conversation_id, stored, [StoredMessage(Message("user", text))], [], [], typed_text=text
+                )
 
     async def press_button(self, actor: Actor, conversation_id: str, token: str, approve: bool) -> ChatResult:
         """The user pressed Confirm or Cancel on a card. The backend acts first; the model only
         puts the result into words."""
         async with self._conversation_locks.hold(conversation_id):
-            stored = await self.store.load(conversation_id, actor.user_id)
-            if not stored:
-                raise NotFound("Unknown conversation")
+            with self._observer.request_scope(conversation_id, actor.user_id):
+                stored = await self.store.load(conversation_id, actor.user_id)
+                if not stored:
+                    raise NotFound("Unknown conversation")
 
-            tool = "confirm_pending_action" if approve else "cancel_pending_action"
-            started = time.perf_counter()
-            ctx = ToolContext(actor, self._services, conversation_id)
-            outcome = await self._registry.execute(ctx, ToolCall("button", tool, {"token": token}))
-            record = ToolRecord(tool, self._registry.request_type(tool), outcome.kind, outcome.is_error,
-                                int((time.perf_counter() - started) * 1000))
+                tool = "confirm_pending_action" if approve else "cancel_pending_action"
+                started = time.perf_counter()
+                ctx = ToolContext(actor, self._services, conversation_id)
+                outcome = await self._registry.execute(ctx, ToolCall("button", tool, {"token": token}))
+                seconds = time.perf_counter() - started
+                record = ToolRecord(tool, self._registry.request_type(tool), outcome.kind, outcome.is_error,
+                                    int(seconds * 1000))
+                self._observer.tool_finished(actor, tool, {"token": token, "via": "button"}, outcome, seconds)
 
-            # The button press reaches the model as a tool call plus its result. A user can type any text,
-            # but cannot create a tool result, so a typed "SYSTEM EVENT ... done" can never pass for this.
-            call = ToolCall(f"button_{uuid.uuid4().hex[:12]}", tool, {"token": token})
-            result = {**outcome.result,
-                      "note": f"The user pressed the {'Confirm' if approve else 'Cancel'} button in the app."}
-            exchange = [
-                StoredMessage(Message("assistant", "", tool_calls=(call,))),
-                StoredMessage(Message("user", tool_results=(
-                    ToolResult(call.id, json.dumps(result, ensure_ascii=False, default=str), outcome.is_error),
-                ))),
-            ]
-            return await self._run(actor, conversation_id, stored, exchange, [record], [outcome.blocks])
+                # The button press reaches the model as a tool call plus its result. A user can type any text,
+                # but cannot create a tool result, so a typed "SYSTEM EVENT ... done" can never pass for this.
+                call = ToolCall(f"button_{uuid.uuid4().hex[:12]}", tool, {"token": token})
+                result = {**outcome.result,
+                          "note": f"The user pressed the {'Confirm' if approve else 'Cancel'} button in the app."}
+                exchange = [
+                    StoredMessage(Message("assistant", "", tool_calls=(call,))),
+                    StoredMessage(Message("user", tool_results=(
+                        ToolResult(call.id, json.dumps(result, ensure_ascii=False, default=str), outcome.is_error),
+                    ))),
+                ]
+                return await self._run(actor, conversation_id, stored, exchange, [record], [outcome.blocks])
 
     # ---- the loop ----
 
     async def _run(
         self, actor: Actor, conversation_id: str, stored: list[StoredMessage],
         new_items: list[StoredMessage], records: list[ToolRecord], step_blocks: list[list[dict]],
+        typed_text: str | None = None,  # what the user typed this turn (None for a button press)
     ) -> ChatResult:
         started = time.perf_counter()
         system = build_system_prompt(await self._services.actors.profile(actor))
@@ -203,6 +215,7 @@ class Agent:
 
         deadline = time.monotonic() + self._deadline_seconds  # one budget for ALL the model calls of this request
         for _ in range(self._max_steps):
+            llm_started = time.perf_counter()
             try:
                 remaining = deadline - time.monotonic()
                 if remaining <= 0:
@@ -216,6 +229,7 @@ class Agent:
             except LLMError as llm_error:
                 error, response = llm_error, None
             if response is None:
+                self._observer.llm_call_finished(time.perf_counter() - llm_started, None, error.kind)
                 logger.error("Model call failed: %s (%s)", error.message, error.kind)
                 default = TIMEOUT_TEXT if error.kind == "timeout" else LLM_DOWN_TEXT
                 failed, final_text = True, text_without_model(records, default)
@@ -223,9 +237,10 @@ class Agent:
                 break
             llm_calls += 1
             usage += response.usage
+            self._observer.llm_call_finished(time.perf_counter() - llm_started, response.usage, "ok")
 
             if not response.tool_calls:
-                final_text = response.text.strip()
+                final_text = drop_foreign_preamble(response.text.strip(), typed_text)
                 if not final_text:
                     final_text = REFUSAL_TEXT if response.stop_reason == "refusal" else EMPTY_TEXT
                 break
@@ -234,10 +249,12 @@ class Agent:
             for call in response.tool_calls:
                 tool_started = time.perf_counter()
                 outcome: ToolOutcome = await self._registry.execute(ctx, call)
+                tool_seconds = time.perf_counter() - tool_started
                 records.append(ToolRecord(
                     call.name, self._registry.request_type(call.name), outcome.kind, outcome.is_error,
-                    int((time.perf_counter() - tool_started) * 1000),
+                    int(tool_seconds * 1000),
                 ))
+                self._observer.tool_finished(actor, call.name, call.input, outcome, tool_seconds)
                 results.append(ToolResult(call.id, json.dumps(outcome.result, ensure_ascii=False, default=str),
                                           outcome.is_error))
                 blocks_this_step += outcome.blocks
@@ -257,8 +274,10 @@ class Agent:
         await self.store.append(
             conversation_id, actor.user_id, to_save + [StoredMessage(Message("assistant", final_text), blocks)]
         )
-        return ChatResult(
+        chat_result = ChatResult(
             conversation_id=conversation_id, text=final_text, blocks=blocks, usage=usage,
             tool_records=records, request_type=request_type, outcome=outcome_label, llm_calls=llm_calls,
             duration_ms=int((time.perf_counter() - started) * 1000),
         )
+        await self._observer.request_finished(actor, typed_text, chat_result)
+        return chat_result

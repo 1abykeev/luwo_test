@@ -13,6 +13,8 @@ from app.repositories.interfaces import UnitOfWorkFactory
 from app.repositories.memory.store import load_demo_world
 from app.repositories.memory.unit_of_work import MemoryUnitOfWork
 from app.repositories.postgres.unit_of_work import PostgresUnitOfWork
+from app.observability.request_log import InMemoryRequestLogStore, PostgresRequestLogStore, RequestLogStore
+from app.observability.telemetry import Telemetry
 from app.services import Services, build_services
 from app.tools import build_registry
 from seed.world import DEMO_PASSWORD
@@ -34,11 +36,20 @@ def build_conversation_store() -> ConversationStore:
     return PostgresConversationStore()
 
 
-def build_app() -> tuple[Services, Agent]:
+def build_request_log() -> RequestLogStore:
+    """Analytics rows are the agent's own state too, so they are not part of the swappable lists data source."""
+    if settings.data_source == "memory":
+        return InMemoryRequestLogStore()
+    return PostgresRequestLogStore()
+
+
+def build_app() -> tuple[Services, Agent, RequestLogStore]:
     """Everything the API needs, wired once. The services and the agent share one data source."""
     services = build_services(build_uow_factory())
+    request_log = build_request_log()
     agent = Agent(
         build_llm_client(), build_registry(), services, build_conversation_store(),
         deadline_seconds=settings.agent_timeout_seconds,
+        observer=Telemetry(request_log, log_user_text=settings.log_user_text),
     )
-    return services, agent
+    return services, agent, request_log

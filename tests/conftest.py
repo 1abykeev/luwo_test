@@ -1,3 +1,4 @@
+import asyncio
 import os
 from datetime import datetime, timedelta, timezone
 
@@ -29,6 +30,26 @@ async def _ensure_database() -> None:
             await admin.execute(f'CREATE DATABASE "{url.database}"')
     finally:
         await admin.close()
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _fresh_test_schema():
+    """Rebuild the test database's tables once per run. create_all alone never adds a column to a table
+    that already exists, so a schema change would otherwise break the Postgres tests until the test
+    database was deleted by hand."""
+
+    async def rebuild():
+        await _ensure_database()
+        engine = create_async_engine(TEST_DB_URL, poolclass=NullPool)
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.drop_all)
+            await conn.run_sync(Base.metadata.create_all)
+        await engine.dispose()
+
+    try:
+        asyncio.run(rebuild())
+    except Exception:  # no PostgreSQL running: the memory tests still run, the Postgres ones skip
+        pass
 
 
 @pytest.fixture(params=["memory", "postgres"])

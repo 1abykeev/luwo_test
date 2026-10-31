@@ -562,3 +562,23 @@ async def test_a_change_made_before_the_time_ran_out_is_still_reported(make_agen
 
     assert result.text == CHANGE_MADE_TEXT
     assert "Новый Ученик" in await roster(services, aigul, "4А")
+
+
+# ---- language guard: an English "thinking aloud" paragraph in front of the answer is removed ----
+
+async def test_an_english_preamble_in_front_of_a_russian_answer_is_removed(make_agent, actor):
+    agent, _, store = make_agent([text_response(
+        "There are two Amirs in 4А, so I need to ask which one.\n\nКакого Амира удалить?"
+    )])
+    aigul = await actor("aigul@luwo.test")
+    result = await agent.chat(aigul, "Удалите Амира из моего класса")
+
+    assert result.text == "Какого Амира удалить?"
+    saved = await store.load(result.conversation_id, aigul.user_id)
+    assert saved[-1].message.text == "Какого Амира удалить?"  # the history stays clean too
+
+
+async def test_english_users_are_not_touched_by_the_guard(make_agent, actor):
+    agent, _, _ = make_agent([text_response("Which Amir should I remove? There are two matches in 4A.")])
+    result = await agent.chat(await actor("aigul@luwo.test"), "Remove Amir from my class")
+    assert result.text.startswith("Which Amir")

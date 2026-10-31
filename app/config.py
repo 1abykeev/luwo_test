@@ -24,11 +24,25 @@ class Settings(BaseSettings):
     # The most time one chat request may take in total (all model calls together).
     agent_timeout_seconds: float = 90.0
 
+    # Web pages allowed to call the API from a browser (the Expo web preview). Native apps don't need CORS.
+    cors_origins: str = "http://localhost:8081,http://localhost:19006"
+
+    log_level: str = "INFO"
+    log_json: bool = True  # one JSON object per line; False gives readable colored lines for local work
+    # Record what users typed (and tool arguments) in the logs. The task asks for the user request in the
+    # logs, so this is ON in development; anywhere else it is OFF unless you set LOG_USER_TEXT=true,
+    # because messages may contain personal data (names of children) that you may not be allowed to store.
+    log_user_text: bool | None = None  # None = decided by APP_ENV, see check_secret
+    # If set, /metrics requires "Authorization: Bearer <token>". Empty = open (fine for local use).
+    metrics_token: str = ""
+
     jwt_secret: str = DEV_JWT_SECRET
     jwt_expire_minutes: int = 480
 
     @model_validator(mode="after")
     def check_secret(self) -> "Settings":
+        if self.log_user_text is None:
+            self.log_user_text = self.app_env == "dev"
         if len(self.jwt_secret) < MIN_SECRET_LENGTH:
             raise ValueError(f"JWT_SECRET must be at least {MIN_SECRET_LENGTH} characters long")
         if self.app_env != "dev" and self.jwt_secret == DEV_JWT_SECRET:

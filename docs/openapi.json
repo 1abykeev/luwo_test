@@ -3,7 +3,7 @@
   "info": {
     "title": "Luwo list-support agent",
     "description": "\nAI support agent for Luwo: helps teachers and school administrators keep lists of students,\nteachers and classes up to date through a chat.\n\n**Try it:** `POST /auth/login` with a demo account, press **Authorize** and paste the token.\n",
-    "version": "0.2.0"
+    "version": "0.3.0"
   },
   "paths": {
     "/auth/login": {
@@ -101,7 +101,7 @@
           "chat"
         ],
         "summary": "Send a message to the agent",
-        "description": "The agent reads the message with the conversation so far, looks things up, and answers. Changes are never made here: the agent proposes them and the response carries a `confirmation` card. The change happens only after the user presses Confirm (`POST /chat/confirm`) or writes a clear yes in a later message.\n\n**Cards (`blocks`)** the app draws under the answer. Every block has a `type`:\n\n| type | when | main fields |\n|---|---|---|\n| `class_roster` | a class list | `class`, `school`, `teachers` (null = hidden from this user), `students[{id, full_name, status}]` |\n| `class_overview` | classes of a school | `classes[{name, school, active_students, teachers}]` |\n| `teacher_list` | teachers | `teachers[{id, full_name, school, classes}]` |\n| `school_list` | schools (superadmin) | `schools[{id, name}]` |\n| `student_list` | search results, to pick from | `students[{id, full_name, class, school, status}]` |\n| `student_card` | one student | `student`, `history[{action, date, from_class, to_class}]` |\n| `duplicates` | namesakes | `groups[{name, students}]` |\n| `investigation` | \"where did the student go\" | `findings[{student_id, full_name, state, current_class, history}]` |\n| `confirmation` | a change waits for the user | `token`, `summary`, `details`, `warnings`, `expires_at` → show Confirm / Cancel buttons that call `POST /chat/confirm` |\n| `result` | a change was made | `status` (`done` / `already_done`), `result` |\n| `banner` | an error or notice | `level` (`error` / `info`), `message`, `code` |",
+        "description": "The agent reads the message with the conversation so far, looks things up, and answers. Changes are never made here: the agent proposes them and the response carries a `confirmation` card. The change happens only after the user presses Confirm (`POST /chat/confirm`) or writes a clear yes in a later message.\n\n**Cards (`blocks`)** the app draws under the answer. Every block has a `type`:\n\n| type | when | main fields |\n|---|---|---|\n| `class_roster` | a class list | `class`, `school`, `teachers` (null = hidden from this user), `students[{id, full_name, status}]` |\n| `class_overview` | classes of a school | `classes[{name, school, active_students, teachers}]` |\n| `teacher_list` | teachers | `teachers[{id, full_name, school, classes}]` |\n| `school_list` | schools (superadmin) | `schools[{id, name}]` |\n| `student_list` | search results, to pick from | `students[{id, full_name, class, school, status}]` |\n| `student_card` | one student | `student`, `history[{action, date, from_class, to_class}]` |\n| `duplicates` | namesakes | `groups[{name, students}]` |\n| `investigation` | \"where did the student go\" | `findings[{student_id, full_name, state, current_class, history}]` |\n| `confirmation` | a change waits for the user | `token`, `summary`, `details`, `warnings`, `expires_at` → show Confirm / Cancel buttons that call `POST /chat/confirm` |\n| `result` | a change was made, was already made, or was cancelled | `status` (`done` / `already_done` / `cancelled`), `token` (of the confirmation it answers), `result` |\n| `banner` | an error or notice | `level` (`error` / `info`), `message`, `code` |",
         "operationId": "chat_chat_post",
         "requestBody": {
           "content": {
@@ -305,6 +305,79 @@
         }
       }
     },
+    "/analytics/requests": {
+      "get": {
+        "tags": [
+          "analytics"
+        ],
+        "summary": "What people ask the agent, and how it went",
+        "description": "Every chat request is classified by type and outcome. This answers: which questions are most and least common, how many were resolved, how many hit permissions, how many needed a clarification, plus token use and response times. Superadmin only: it covers every school.",
+        "operationId": "request_stats_analytics_requests_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 90,
+              "minimum": 1,
+              "description": "How many days back to look",
+              "default": 7,
+              "title": "Days"
+            },
+            "description": "How many days back to look"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyticsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "tags": [
@@ -331,6 +404,93 @@
   },
   "components": {
     "schemas": {
+      "AnalyticsResponse": {
+        "properties": {
+          "since": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Since"
+          },
+          "days": {
+            "type": "integer",
+            "title": "Days"
+          },
+          "total_requests": {
+            "type": "integer",
+            "title": "Total Requests"
+          },
+          "conversations": {
+            "type": "integer",
+            "title": "Conversations"
+          },
+          "outcomes": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Outcomes",
+            "description": "resolved, permission_denied, needs_clarification, out_of_scope, error"
+          },
+          "outcome_shares": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Outcome Shares"
+          },
+          "by_type": {
+            "items": {
+              "$ref": "#/components/schemas/TypeRow"
+            },
+            "type": "array",
+            "title": "By Type",
+            "description": "Most common first"
+          },
+          "most_common_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Most Common Type"
+          },
+          "least_common_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Least Common Type"
+          },
+          "tokens": {
+            "$ref": "#/components/schemas/TokenStats"
+          },
+          "latency": {
+            "$ref": "#/components/schemas/LatencyStats"
+          }
+        },
+        "type": "object",
+        "required": [
+          "since",
+          "days",
+          "total_requests",
+          "conversations",
+          "outcomes",
+          "outcome_shares",
+          "by_type",
+          "most_common_type",
+          "least_common_type",
+          "tokens",
+          "latency"
+        ],
+        "title": "AnalyticsResponse"
+      },
       "ChatMeta": {
         "properties": {
           "request_type": {
@@ -592,6 +752,38 @@
         ],
         "title": "HistoryResponse"
       },
+      "LatencyStats": {
+        "properties": {
+          "p50_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "P50 Ms"
+          },
+          "p95_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "P95 Ms"
+          }
+        },
+        "type": "object",
+        "required": [
+          "p50_ms",
+          "p95_ms"
+        ],
+        "title": "LatencyStats"
+      },
       "LoginRequest": {
         "properties": {
           "email": {
@@ -691,6 +883,74 @@
         ],
         "title": "TokenResponse"
       },
+      "TokenStats": {
+        "properties": {
+          "input": {
+            "type": "integer",
+            "title": "Input",
+            "description": "All input tokens, including the cached ones"
+          },
+          "output": {
+            "type": "integer",
+            "title": "Output"
+          },
+          "cached": {
+            "type": "integer",
+            "title": "Cached",
+            "description": "The part of the input served from the prompt cache"
+          },
+          "avg_per_request": {
+            "type": "number",
+            "title": "Avg Per Request"
+          },
+          "avg_per_conversation": {
+            "type": "number",
+            "title": "Avg Per Conversation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "input",
+          "output",
+          "cached",
+          "avg_per_request",
+          "avg_per_conversation"
+        ],
+        "title": "TokenStats"
+      },
+      "TypeRow": {
+        "properties": {
+          "request_type": {
+            "type": "string",
+            "title": "Request Type",
+            "description": "add, remove, transfer, show, search, missing_student, duplicate, off_topic, ..."
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "share": {
+            "type": "number",
+            "title": "Share",
+            "description": "Part of all requests, 0 to 1"
+          },
+          "outcomes": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Outcomes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "request_type",
+          "count",
+          "share",
+          "outcomes"
+        ],
+        "title": "TypeRow"
+      },
       "ValidationError": {
         "properties": {
           "loc": {
@@ -748,6 +1008,10 @@
     {
       "name": "chat",
       "description": "Talk to the agent. Everything the mobile app does goes through here."
+    },
+    {
+      "name": "analytics",
+      "description": "What people ask the agent and how it went (superadmin)."
     },
     {
       "name": "system",

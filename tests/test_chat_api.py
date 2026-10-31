@@ -162,3 +162,21 @@ async def test_the_chat_contract_is_documented(client_factory):
     for block in ["class_roster", "confirmation", "banner", "investigation"]:
         assert block in description
     assert {"/chat", "/chat/confirm", "/chat/history"} <= set(spec["paths"])
+
+
+# ---- CORS: the web preview of the mobile app runs on another port ----
+
+async def test_the_allowed_web_origin_may_call_the_api(client_factory):
+    client = await client_factory()
+    preflight = await client.options("/chat", headers={
+        "Origin": "http://localhost:8081", "Access-Control-Request-Method": "POST",
+        "Access-Control-Request-Headers": "authorization,content-type"})
+    assert preflight.status_code == 200
+    assert preflight.headers["access-control-allow-origin"] == "http://localhost:8081"
+
+
+async def test_other_origins_get_no_cors_permission(client_factory):
+    client = await client_factory()
+    preflight = await client.options("/chat", headers={
+        "Origin": "https://evil.example", "Access-Control-Request-Method": "POST"})
+    assert "access-control-allow-origin" not in preflight.headers

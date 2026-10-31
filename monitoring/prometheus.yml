@@ -1,0 +1,13 @@
+# Scrapes the backend that runs on your machine (uvicorn on port 8000).
+# host.docker.internal is how a container reaches the host; docker-compose adds it on Linux too.
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: luwo
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["host.docker.internal:8000"]
+    # If you set METRICS_TOKEN in .env, add:
+    # authorization:
+    #   credentials: <the same token>

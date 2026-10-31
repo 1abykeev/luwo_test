@@ -26,3 +26,10 @@ def test_a_real_secret_is_accepted_in_production():
 def test_a_short_secret_is_refused_even_in_development():
     with pytest.raises(ValueError, match="32"):
         settings(app_env="dev", jwt_secret="too-short")
+
+
+def test_message_text_is_logged_in_development_and_not_elsewhere_unless_asked():
+    assert settings(app_env="dev").log_user_text is True
+    assert settings(app_env="production", jwt_secret="k" * 40).log_user_text is False
+    assert settings(app_env="production", jwt_secret="k" * 40, log_user_text=True).log_user_text is True
+    assert settings(app_env="dev", log_user_text=False).log_user_text is False

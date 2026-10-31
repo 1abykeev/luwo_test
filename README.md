@@ -4,10 +4,13 @@ AI-агент, который через обычный чат помогает 
 учеников, учителей и классов. Агент сам выбирает инструменты (tool use, Claude), а все права
 и правила проверяет backend, независимо от того, что решил агент.
 
-> **Статус: промежуточная версия (backend + агент).** Готово: backend, агент на Claude,
-> PostgreSQL с тестовыми данными, адаптеры данных, подтверждение изменений, история, 331 тест,
-> API-документация. В работе: мобильное приложение (React Native), аналитика запросов и метрики,
-> нагрузочное тестирование и оценка мощности. Эти разделы ниже помечены «скоро».
+> **Статус: готово всё, кроме нагрузочных тестов.** Backend и агент на Claude, PostgreSQL с тестовыми
+> данными, адаптеры данных, мобильное приложение (React Native), аналитика запросов, структурные логи,
+> метрики Prometheus и дашборд Grafana, 389 тестов backend и 77 тестов приложения. В работе: нагрузочное
+> тестирование и измеренная оценка мощности (раздел «Скоро»).
+
+![Вход](docs/screenshots/login.png) ![Список класса](docs/screenshots/class-list.png)
+![Выбор ученика](docs/screenshots/choose-student.png) ![Подтверждение](docs/screenshots/confirmation.png)
 
 ## Быстрый старт
 
@@ -35,6 +38,22 @@ uvicorn app.main:app --reload
    Подтвердить: `POST /chat/confirm` с `conversation_id`, `token`, `approve: true`.
 
 Без Docker и без базы (данные в памяти, только для знакомства): в `.env` поставьте `DATA_SOURCE=memory`.
+
+**Мобильное приложение** (Expo, нужен Node.js; подробности в [mobile/README.md](mobile/README.md)):
+
+```bash
+cd mobile && npm install && cp .env.example .env
+npx expo start                  # i: iOS-симулятор, w: браузер, или Expo Go на телефоне
+```
+
+На экране входа есть кнопки демо-пользователей: одно нажатие, и вы в чате.
+
+**Дашборд мониторинга** (необязательно; Prometheus и Grafana в Docker):
+
+```bash
+docker compose --profile observability up -d
+# Grafana: http://localhost:3000 (вход не нужен), дашборд «Luwo list agent»; Prometheus: http://localhost:9090
+```
 
 **Пообщаться с агентом из терминала** (данные в памяти, настоящий Claude):
 
@@ -72,7 +91,7 @@ python -m scripts.try_agent --demo             # набор готовых ди�
 ## Как это устроено
 
 ```
- Мобильное приложение (скоро)        POST /chat, /chat/confirm, /chat/history
+ Мобильное приложение (mobile/)     POST /chat, /chat/confirm, /chat/history
               │
         FastAPI (app/api)  ──  JWT: в токене только id, роль и классы читаются из БД на каждом запросе
               │
@@ -100,7 +119,10 @@ python -m scripts.try_agent --demo             # набор готовых ди�
 | `app/auth/`, `app/api/` | вход и JWT; HTTP-маршруты |
 | `app/container.py` | **единственное место, где выбирается источник данных** |
 | `app/db/`, `migrations/`, `seed/` | модели, миграции Alembic, тестовые данные |
-| `tests/` | 331 тест |
+| `app/observability/` | классификация запросов, журнал запросов и аналитика, структурные логи, метрики Prometheus |
+| `monitoring/` | конфигурация Prometheus и Grafana, готовый дашборд |
+| `mobile/` | мобильное приложение: чат, карточки, подтверждение ([mobile/README.md](mobile/README.md)) |
+| `tests/` | 389 тестов backend (приложение: 77 тестов в `mobile/`) |
 
 ### Как заменить источник данных (REST или MCP Luwo)
 
@@ -113,6 +135,69 @@ python -m scripts.try_agent --demo             # набор готовых ди�
 
 История чата (`conversations`, `chat_messages`) намеренно вынесена из этого интерфейса: это
 собственное состояние агента, оно остаётся у нас, когда списки переедут в backend Luwo.
+
+## Аналитика, логи и метрики
+
+**Аналитика запросов.** Каждый запрос к агенту получает тип (`show`, `search`, `add`, `remove`, `transfer`,
+`assign`, `missing_student`, `duplicate`, `off_topic`, `confirmation`) и исход (`resolved`, `permission_denied`,
+`needs_clarification`, `out_of_scope`, `error`). Тип и исход выводятся из того, какие инструменты вызвал агент
+и чем они закончились, без второго обращения к модели. Строка пишется в таблицу `request_log`.
+`GET /analytics/requests?days=7` (только суперадмин: данные по всем школам) отвечает на вопросы из задания:
+какие запросы самые частые и самые редкие, сколько решено, сколько упёрлось в права, сколько потребовало
+уточнения, плюс токены и время ответа. Пример ответа (реальный прогон, 28 запросов):
+
+```json
+{ "total_requests": 28, "conversations": 22,
+  "outcomes": {"resolved": 21, "permission_denied": 2, "needs_clarification": 3, "out_of_scope": 2, "error": 0},
+  "most_common_type": "show", "least_common_type": "transfer",
+  "by_type": [{"request_type": "show", "count": 12, "share": 0.429,
+               "outcomes": {"resolved": 10, "permission_denied": 2, "...": 0}}, "..."],
+  "tokens": {"input": 339364, "output": 3494, "cached": 192707, "avg_per_request": 12244.9, "avg_per_conversation": 15584.5},
+  "latency": {"p50_ms": 2527.0, "p95_ms": 3967.8} }
+```
+
+То же можно получить SQL-запросом: `SELECT request_type, outcome, count(*) FROM request_log GROUP BY 1, 2 ORDER BY 3 DESC;`
+
+**Структурные логи.** Одна строка = один JSON-объект; `conversation_id`, `user_id` и `request_id` попадают в каждую
+строку запроса автоматически (contextvars). События: `http_request` (маршрут, статус, время), `conversation_started`,
+`tool_call` (инструмент, результат, время, аргументы), `permission_denied` (отказ по правам, уровень warning),
+`tool_error` (сбой backend, уровень error, с трассировкой), `llm_call_failed`, `chat_request` (итог запроса: тип, исход,
+инструменты, токены, время, текст пользователя). Логи библиотек идут в том же формате. Пример (реальные строки):
+
+```json
+{"event": "permission_denied", "level": "warning", "tool": "list_class_students", "role": "teacher",
+ "args": "{\"class_name\": \"4А\", \"school\": \"Гимназия №5\"}", "message": "You only have access to your own school (Лицей №1)",
+ "conversation_id": "c_273145ade4a34772", "user_id": 6, "request_id": "d03c0b747221", "timestamp": "2026-10-30T17:49:57Z"}
+{"event": "chat_request", "level": "warning", "request_type": "show", "outcome": "permission_denied", "tools": ["list_class_students"],
+ "llm_calls": 2, "input_tokens": 13506, "output_tokens": 145, "cached_tokens": 13319, "duration_ms": 2402,
+ "user_text": "Покажи список 4А в Гимназии №5", "conversation_id": "c_273145ade4a34772", "user_id": 6}
+```
+
+Настройки: `LOG_LEVEL`, `LOG_JSON` (false = читаемый вывод), `LOG_USER_TEXT` (тексты сообщений и аргументы инструментов
+в логах: по умолчанию включено только при `APP_ENV=dev`, в остальных окружениях выключено, пока не включить явно,
+потому что в сообщениях могут быть персональные данные детей; токены подтверждения в логи не попадают никогда).
+
+**Метрики Prometheus** на `/metrics` (с `METRICS_TOKEN` в `.env` требуется токен). Задание просит:
+
+| Что | Метрика |
+|---|---|
+| запросы в секунду | `rate(luwo_http_requests_total[1m])`, по маршрутам; чат отдельно: `luwo_agent_requests_total` |
+| время ответа агента, p50/p95 | `luwo_agent_request_duration_seconds` (гистограмма) |
+| время ответа модели | `luwo_llm_call_duration_seconds` |
+| время ответа базы, p50/p95 | `luwo_db_query_duration_seconds` (измеряется хуком SQLAlchemy, репозитории про метрики не знают) |
+| доля ошибок | HTTP 5xx: `luwo_http_requests_total{status=~"5.."}`; агент: `luwo_agent_requests_total{outcome="error"}` |
+| токены Claude на диалог | `luwo_llm_tokens_total{kind}` и `luwo_conversations_started_total` |
+| память и CPU процесса | `luwo_process_resident_memory_bytes`, `luwo_process_cpu_seconds_total` (через psutil, работает и на macOS) |
+
+Метки только с ограниченным набором значений (шаблон маршрута, тип запроса, имя инструмента): ни id диалога, ни id
+пользователя, ни свободного текста; неизвестные URL сводятся к одной метке `unmatched`. Тест это проверяет.
+Задержка p50/p95 считается в Prometheus: `histogram_quantile(0.95, sum by (le) (rate(luwo_agent_request_duration_seconds_bucket[5m])))`.
+
+**Дашборд.** `docker compose --profile observability up -d` поднимает Prometheus (опрашивает backend каждые 5 с)
+и Grafana с готовым дашбордом (24 панели: трафик и ошибки, время ответа, что спрашивают и сколько токенов,
+процесс). Все запросы дашборда проверены на реальных данных.
+
+![Дашборд Grafana](docs/screenshots/grafana-dashboard.png)
 
 ## Как агент меняет данные: два шага
 
@@ -155,7 +240,7 @@ python -m scripts.try_agent --demo             # набор готовых ди�
 ## Тесты
 
 ```bash
-python -m pytest                 # 331 тест; PostgreSQL-варианты пропускаются, если база не запущена
+python -m pytest                 # 389 тестов; PostgreSQL-варианты пропускаются, если база не запущена
 python -m pytest -m live         # 1 тест с настоящим Claude (стоит доли цента)
 ```
 
@@ -212,11 +297,15 @@ python -m pytest -m live         # 1 тест с настоящим Claude (ст
 
 ## Скоро
 
-- Мобильное приложение на React Native (Expo): чат, карточки, кнопки подтверждения.
-- Аналитика запросов по типам, структурные логи, метрики Prometheus и описание дашборда.
-- Нагрузочное тестирование (Locust), измеренная оценка мощности, раздел «как подключить REST/MCP».
+- Нагрузочное тестирование (Locust): сначала с поддельной моделью (измеряем backend и базу), затем небольшой
+  прогон на настоящем Claude; измеренная оценка мощности (память, CPU, запросов в секунду, p50/p95).
 
 ## Известные ограничения
+
+- Мобильное приложение целиком (все сценарии, ошибки, повтор, просроченный токен) проверено в браузерной сборке
+  на телефонном размере экрана против настоящего backend и Claude. На iOS-симуляторе (iPhone 17, Expo Go) приложение
+  открыто и использовано вручную автором: вход, список класса, карточка «куда пропал ученик». Android не проверялся.
+- Статистика (`/analytics/requests`) доступна только суперадмину; по школам она не разделена.
 
 - Поиск по имени ищет подстроку без учёта регистра; опечатки обрабатывает модель, повторяя поиск
   с другим написанием.

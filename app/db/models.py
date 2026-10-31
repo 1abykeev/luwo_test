@@ -155,6 +155,8 @@ class RequestLog(Base):
             name="request_log_outcome_check",
         ),
         Index("ix_request_log_type", "request_type"),
+        Index("ix_request_log_at", "at"),
+        Index("ix_request_log_conversation", "conversation_id"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -164,8 +166,10 @@ class RequestLog(Base):
     request_type: Mapped[str] = mapped_column(String(30))
     outcome: Mapped[str] = mapped_column(String(25))
     tools_called: Mapped[list | None] = mapped_column(JSONB)
-    input_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    input_tokens: Mapped[int] = mapped_column(Integer, default=0)  # all input, cached or not
     output_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    cached_tokens: Mapped[int] = mapped_column(Integer, default=0, server_default="0")  # the part of input served from the cache
+    llm_calls: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     latency_ms: Mapped[int] = mapped_column(Integer, default=0)
 
 
