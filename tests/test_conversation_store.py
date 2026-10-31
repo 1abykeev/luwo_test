@@ -7,10 +7,10 @@ from sqlalchemy.pool import NullPool
 from app.agent.llm import Message, ToolCall, ToolResult
 from app.agent.memory import (
     InMemoryConversationStore,
-    PostgresConversationStore,
     StoredMessage,
     trim_history,
 )
+from app.db.agent_state import PostgresConversationStore
 from app.db.base import Base
 from app.domain.errors import NotFound
 from seed.seed import seed

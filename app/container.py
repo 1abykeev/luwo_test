@@ -6,10 +6,11 @@ or MCP server and add one branch below. No other file changes."""
 
 from app.agent.agent import Agent
 from app.agent.factory import build_llm_client
-from app.agent.memory import ConversationStore, InMemoryConversationStore, PostgresConversationStore
+from app.agent.memory import ConversationStore, InMemoryConversationStore
 from app.auth.passwords import hash_password
 from app.config import settings
-from app.observability.request_log import InMemoryRequestLogStore, PostgresRequestLogStore, RequestLogStore
+from app.db.agent_state import PostgresConversationStore, PostgresRequestLogStore
+from app.observability.request_log import InMemoryRequestLogStore, RequestLogStore
 from app.observability.telemetry import Telemetry
 from app.repositories.interfaces import UnitOfWorkFactory
 from app.repositories.memory.store import load_demo_world

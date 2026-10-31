@@ -104,7 +104,7 @@ Measured with the real model: before the change 15 of 25 requests were tagged co
 
 | File | What it does |
 |---|---|
-| `app/agent/memory.py` | `ConversationStore` interface, `InMemoryConversationStore`, `PostgresConversationStore`, and `trim_history()` |
+| `app/agent/memory.py` | `ConversationStore` interface, `InMemoryConversationStore`, and `trim_history()`. The PostgreSQL version moved to `app/db/agent_state.py` on Day 4 so the agent package never imports the database |
 | `app/db/models.py` | New tables `conversations` and `chat_messages` |
 | `migrations/versions/50e95f131a5d_conversations.py` | The migration |
 

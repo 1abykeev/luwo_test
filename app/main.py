@@ -8,6 +8,7 @@ from app.api import analytics_routes, auth_routes, chat_routes
 from app.api.errors import install_error_handlers
 from app.config import settings
 from app.container import build_app
+from app.db.instrumentation import install_db_metrics
 from app.observability import metrics
 from app.observability.logging import configure_logging
 from app.observability.request_log import InMemoryRequestLogStore, RequestLogStore
@@ -46,7 +47,7 @@ def create_app(
         allow_headers=["Authorization", "Content-Type"], allow_credentials=False,
     )
     app.add_middleware(metrics.MetricsMiddleware)  # outermost: measures everything, even rejected requests
-    metrics.install_db_metrics()
+    install_db_metrics()
     install_error_handlers(app)
     app.include_router(auth_routes.router)
     app.include_router(chat_routes.router)

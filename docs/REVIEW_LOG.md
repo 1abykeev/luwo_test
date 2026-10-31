@@ -90,3 +90,8 @@ block of new lines. The main agent appends them here after the review and later 
 - [2026-11-01] [nice] [backend] UnitOfWork protocol used writable attributes, so mypy rejected both adapters — status: fixed — read-only properties; no hidden signature mismatch found
 - [2026-11-01] [nice] [backend] mypy still reports 96 errors, mostly Optional narrowing in actions.py apply() — status: wontfix — needs restructuring, no behaviour risk found; documented in README limitations
 - [2026-11-01] [nice] [security] No rate limit on /chat (#15b) — status: wontfix — documented limitation; belongs at proxy level, a late in-app limit needs mobile 429 handling and load-test config
+
+## Architecture check, step 2 (2026-11-01)
+
+- [2026-11-01] [important] [agent] README claimed the upper layers never import the database, but importing app.agent.agent or app.observability.telemetry loaded SQLAlchemy, asyncpg and app.db (Postgres stores in agent/memory.py and observability/request_log.py, SQL hooks in observability/metrics.py) — status: fixed — stores moved to app/db/agent_state.py, SQL hooks to app/db/instrumentation.py; new tests/test_layers.py (fresh-interpreter import check, 10 modules)
+- [2026-11-01] [nice] [docs] "Swap the data source" section did not mention that search relies on the adapter applying Scope, that login reads users through the UnitOfWork, or that REST cannot keep change+history in one transaction — status: fixed — section rewritten, labelled as not tested on a real REST adapter

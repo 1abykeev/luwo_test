@@ -61,7 +61,7 @@ logs its own failures (tested with a broken request log).
 
 | File | What it does |
 |---|---|
-| `request_log.py` | `RequestLogStore` (memory and Postgres), one row per chat request, and the statistics: counts by type and outcome, tokens, p50/p95 |
+| `request_log.py` | `RequestLogStore` (interface and memory version; the Postgres version is in `app/db/agent_state.py`), one row per chat request, and the statistics: counts by type and outcome, tokens, p50/p95 |
 | `classification.py` | Type and outcome of a request, derived from the tools used (Day 2) |
 | `telemetry.py` | The `Observer` interface, `NullObserver`, `Telemetry` |
 | `logging.py` | structlog set up so our logs and library logs are all JSON, with ids from `contextvars` |

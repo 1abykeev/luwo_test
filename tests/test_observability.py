@@ -14,6 +14,7 @@ from app.agent.fake_client import FakeLLMClient, text_response, tool_response
 from app.agent.memory import InMemoryConversationStore
 from app.auth.passwords import hash_password
 from app.config import settings
+from app.db.instrumentation import install_db_metrics
 from app.main import create_app
 from app.observability import metrics
 from app.observability.logging import configure_logging
@@ -256,7 +257,7 @@ async def test_database_time_is_measured_for_postgres_queries(uow_factory):
     async with uow_factory() as uow:
         if not hasattr(uow, "session"):
             pytest.skip("only the PostgreSQL adapter talks to a database")
-        metrics.install_db_metrics()
+        install_db_metrics()
         before = sample("luwo_db_query_duration_seconds_count", operation="SELECT")
         await uow.classes.list_by_school(1)
         assert sample("luwo_db_query_duration_seconds_count", operation="SELECT") == before + 1
