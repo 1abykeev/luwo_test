@@ -1,6 +1,6 @@
 """The request log and its statistics: the same answers from memory and from PostgreSQL."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
@@ -17,7 +17,7 @@ from app.observability.request_log import (
 from seed.seed import seed
 from tests.conftest import TEST_DB_URL, _ensure_database
 
-NOW = datetime(2026, 11, 2, 12, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 11, 2, 12, 0, tzinfo=UTC)
 
 
 @pytest.fixture(params=["memory", "postgres"])

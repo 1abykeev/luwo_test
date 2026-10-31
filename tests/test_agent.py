@@ -7,9 +7,9 @@ import json
 
 import pytest
 
-from app.agent.agent import Agent, GAVE_UP_TEXT, LLM_DOWN_TEXT, display_history
+from app.agent.agent import GAVE_UP_TEXT, LLM_DOWN_TEXT, Agent, display_history
 from app.agent.fake_client import FakeLLMClient, text_response, tool_response
-from app.agent.llm import LLMError, Message
+from app.agent.llm import LLMError
 from app.agent.memory import InMemoryConversationStore
 from app.domain.errors import NotFound
 from app.tools import build_registry

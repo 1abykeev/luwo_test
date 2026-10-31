@@ -15,7 +15,7 @@ Test scenarios built into this data:
 """
 
 from dataclasses import dataclass, replace
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from app.domain.models import (
     ChangeEntry,
@@ -84,7 +84,7 @@ class World:
 
 
 def build_world(password_hash: str | None = None, now: datetime | None = None) -> World:
-    now = now or datetime.now(timezone.utc)
+    now = now or datetime.now(UTC)
     schools = [School(id=i, name=name) for i, name in enumerate(SCHOOLS, start=1)]
     school_id = {s.name: s.id for s in schools}
 

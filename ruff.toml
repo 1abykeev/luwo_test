@@ -1,0 +1,10 @@
+# Linter settings for this project (run: ruff check app tests seed loadtest)
+line-length = 120
+target-version = "py312"
+extend-exclude = ["mobile", "migrations/versions"]
+
+[lint]
+# E4/E7/E9 + F: real errors; I: import order; UP: modern syntax; B: likely bugs; SIM: needless complexity
+select = ["E4", "E7", "E9", "F", "I", "UP", "B", "SIM"]
+# B008: FastAPI's Depends(...) in a default argument is the documented way to use it
+ignore = ["B008"]

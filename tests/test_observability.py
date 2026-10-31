@@ -155,8 +155,12 @@ async def test_button_presses_are_logged_as_requests_too(stack):
 async def test_http_requests_are_counted_by_route_template_not_by_raw_url(stack):
     mine, other = await stack.client(), await stack.client("bakyt@luwo.test")
     conversation = (await say(mine, "привет"))["conversation_id"]
-    ok = lambda: sample("luwo_http_requests_total", method="GET", route="/chat/history", status="200")
-    not_found = lambda: sample("luwo_http_requests_total", method="GET", route="/chat/history", status="404")
+    def ok():
+        return sample("luwo_http_requests_total", method="GET", route="/chat/history", status="200")
+
+    def not_found():
+        return sample("luwo_http_requests_total", method="GET", route="/chat/history", status="404")
+
     ok_before, nf_before = ok(), not_found()
 
     await mine.get("/chat/history", params={"conversation_id": conversation})
@@ -264,23 +268,23 @@ async def test_database_time_is_measured_for_postgres_queries(uow_factory):
 async def test_every_log_line_of_a_request_carries_the_conversation_and_user_id(stack, logs):
     client = await stack.client()
     reply = await say(client, "покажи список")
-    lines = [l for l in logs() if l.get("event") in ("conversation_started", "tool_call", "chat_request")]
+    lines = [line for line in logs() if line.get("event") in ("conversation_started", "tool_call", "chat_request")]
 
-    assert {l["event"] for l in lines} == {"conversation_started", "tool_call", "chat_request"}
-    assert {l["conversation_id"] for l in lines} == {reply["conversation_id"]}
-    assert {l["user_id"] for l in lines} == {6}
-    request = next(l for l in lines if l["event"] == "chat_request")
+    assert {line["event"] for line in lines} == {"conversation_started", "tool_call", "chat_request"}
+    assert {line["conversation_id"] for line in lines} == {reply["conversation_id"]}
+    assert {line["user_id"] for line in lines} == {6}
+    request = next(line for line in lines if line["event"] == "chat_request")
     assert request["request_type"] == "show" and request["outcome"] == "resolved"
     assert request["tools"] == ["list_class_students"] and request["llm_calls"] == 2
     assert request["input_tokens"] == 200 and request["user_text"] == "покажи список" and request["role"] == "teacher"
-    tool = next(l for l in lines if l["event"] == "tool_call")
+    tool = next(line for line in lines if line["event"] == "tool_call")
     assert tool["tool"] == "list_class_students" and tool["ok"] is True and "duration_ms" in tool
-    assert all("timestamp" in l and l["level"] for l in lines)
+    assert all("timestamp" in line and line["level"] for line in lines)
 
 
 async def test_a_permission_denial_is_logged_as_a_warning_with_its_own_event_name(stack, logs):
     await say(await stack.client(), "покажи 4Б")
-    denial = next(l for l in logs() if l["event"] == "permission_denied")
+    denial = next(line for line in logs() if line["event"] == "permission_denied")
     assert denial["level"] == "warning" and denial["tool"] == "list_class_students"
     assert denial["role"] == "teacher" and "conversation_id" in denial
     assert "not one of your classes" in denial["message"]
@@ -293,12 +297,12 @@ async def test_backend_errors_are_logged_as_errors(stack, logs, monkeypatch):
     monkeypatch.setattr(stack.services.directory, "get_roster", explode)
     await say(await stack.client(), "покажи список")
     lines = logs()
-    failure = next(l for l in lines if l["event"] == "tool_error")
+    failure = next(line for line in lines if line["event"] == "tool_error")
     assert failure["level"] == "error" and failure["tool"] == "list_class_students"
-    request = next(l for l in lines if l["event"] == "chat_request")
+    request = next(line for line in lines if line["event"] == "chat_request")
     assert request["outcome"] == "error" and request["level"] == "error"
-    assert any("database is on fire" in json.dumps(l, ensure_ascii=False) for l in lines), "the traceback should be in the logs"
-    assert not any("database is on fire" in (l.get("message") or "") for l in lines if l["event"] == "tool_error"), \
+    assert any("database is on fire" in json.dumps(line, ensure_ascii=False) for line in lines), "the traceback should be in the logs"
+    assert not any("database is on fire" in (line.get("message") or "") for line in lines if line["event"] == "tool_error"), \
         "...but never in the message that goes back to the model"
 
 
@@ -312,7 +316,7 @@ async def test_message_text_and_tool_arguments_can_be_kept_out_of_the_logs(logs)
 async def test_every_http_request_is_logged_once_with_the_route_and_a_matching_request_id(stack, logs):
     client = await stack.client()
     response = await client.get("/chat/history")
-    line = [l for l in logs() if l["event"] == "http_request" and l["route"] == "/chat/history"][-1]
+    line = [line for line in logs() if line["event"] == "http_request" and line["route"] == "/chat/history"][-1]
     assert line["status"] == 200 and line["method"] == "GET" and "duration_ms" in line
     assert line["request_id"] == response.headers["x-request-id"]
 
@@ -321,14 +325,14 @@ async def test_one_requests_ids_never_leak_into_the_next_one(stack, logs):
     client = await stack.client()
     await say(client, "покажи список")
     await client.get("/chat/history")  # not a chat request: must not carry the earlier conversation id
-    lines = [l for l in logs() if l["event"] == "http_request"]
-    history = next(l for l in lines if l["route"] == "/chat/history")
+    lines = [line for line in logs() if line["event"] == "http_request"]
+    history = next(line for line in lines if line["route"] == "/chat/history")
     assert "conversation_id" not in history
 
 
 async def test_library_logs_use_the_same_json_format(logs):
     logging.getLogger("some.library").warning("something odd happened")
-    line = next(l for l in logs() if l["event"] == "something odd happened")
+    line = next(line for line in logs() if line["event"] == "something odd happened")
     assert line["level"] == "warning" and line["logger"] == "some.library" and "timestamp" in line
 
 
@@ -346,7 +350,7 @@ async def test_a_broken_request_log_does_not_break_the_chat(logs):
     stack = Stack(request_log=BrokenRequestLog())
     reply = await say(await stack.client(), "покажи список")
     assert reply["text"] == "Вот список." and reply["blocks"][0]["type"] == "class_roster"
-    assert any(l["event"] == "telemetry_failed" and l["level"] == "error" for l in logs())
+    assert any(line["event"] == "telemetry_failed" and line["level"] == "error" for line in logs())
 
 
 async def test_a_broken_observer_does_not_break_the_chat():
@@ -377,7 +381,7 @@ async def test_the_http_clients_used_for_the_model_do_not_flood_the_logs(logs):
     for name in ("httpx", "httpx2", "httpcore"):
         logging.getLogger(name).info("HTTP Request: POST https://api.anthropic.com/v1/messages")
     logging.getLogger("httpx2").warning("a real problem")
-    events = [l["event"] for l in logs()]
+    events = [line["event"] for line in logs()]
     assert not any(e.startswith("HTTP Request") for e in events)
     assert "a real problem" in events  # warnings and errors still come through
 

@@ -102,6 +102,54 @@ def test_trimming_never_starts_in_the_middle_of_a_tool_exchange():
     assert all(not (m.role == "user" and m.tool_results) for m in trimmed[:1])
 
 
+def long_turn(n, steps):
+    """One question answered after `steps` tool calls (the agent may take up to 8)."""
+    messages = [Message("user", f"question {n}")]
+    for step in range(steps):
+        call = ToolCall(f"t{n}_{step}", "list_classes", {})
+        messages.append(Message("assistant", "", tool_calls=(call,)))
+        messages.append(Message("user", tool_results=(ToolResult(f"t{n}_{step}", "{}"),)))
+    messages.append(Message("assistant", f"answer {n}"))
+    return messages
+
+
+def assert_valid_history(trimmed):
+    """What the model API needs: no start with a tool result, no tool result without its call before it."""
+    if not trimmed:
+        return
+    assert trimmed[0].role == "user" and not trimmed[0].tool_results
+    seen_calls = set()
+    for message in trimmed:
+        seen_calls.update(call.id for call in message.tool_calls)
+        for result in message.tool_results:
+            assert result.tool_call_id in seen_calls
+
+
+@pytest.mark.parametrize("shape", [
+    [exchange(1), exchange(2), exchange(3)],
+    [long_turn(1, 8), long_turn(2, 8)],
+    [exchange(1), long_turn(2, 8), exchange(3), long_turn(4, 5)],
+    [long_turn(1, 0), long_turn(2, 1), long_turn(3, 2)],
+])
+def test_every_window_size_gives_a_history_the_model_can_accept(shape):
+    history = [message for part in shape for message in part]
+    for window in range(1, len(history) + 2):
+        assert_valid_history(trim_history(history, window))
+
+
+def test_a_window_made_only_of_tool_exchanges_never_starts_with_a_tool_result():
+    history = long_turn(1, 8)  # 18 messages: the question, 8 tool round trips, the answer
+    trimmed = trim_history(history, 10)  # the last 10 messages contain no typed message at all
+    assert_valid_history(trimmed)
+    assert all(not m.tool_results for m in trimmed[:1])
+
+
+def test_a_typed_message_inside_the_window_is_found_even_after_a_long_turn():
+    history = long_turn(1, 8) + exchange(2)
+    trimmed = trim_history(history, 6)
+    assert trimmed[0] == Message("user", "question 2")
+
+
 # ---- review fix #4: two writers at once on one conversation ----
 
 async def test_simultaneous_appends_all_succeed_and_keep_a_clean_order(store):

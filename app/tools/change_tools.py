@@ -8,7 +8,7 @@ from app.config import settings
 from app.domain.errors import Conflict, InvalidRequest
 from app.services.names import clean_person_name
 
-from .base import Tool, ToolContext, ToolOutcome, banner, int_arg, schema, str_arg
+from .base import Tool, ToolContext, ToolOutcome, int_arg, schema, str_arg
 from .read_tools import CLASS_NAME, SCHOOL
 
 PENDING_NOTE = (

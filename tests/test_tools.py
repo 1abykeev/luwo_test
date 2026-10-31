@@ -6,7 +6,7 @@ import pytest
 
 from app.agent.llm import ToolCall
 from app.tools import ToolContext, build_registry
-from tests.helpers import GYMNASIUM, LYCEUM, class_id, student_id, teacher_id
+from tests.helpers import GYMNASIUM, LYCEUM, student_id, teacher_id
 
 REGISTRY = build_registry()
 

@@ -1,7 +1,7 @@
 """In-memory repositories. Same contracts as the Postgres ones, plain Python inside."""
 
 from dataclasses import replace
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.domain.errors import NotFound
 from app.domain.models import (
@@ -25,11 +25,9 @@ def _contains(name: str, query: str) -> bool:
 
 
 def _in_scope(student: Student, scope: Scope) -> bool:
-    if scope.school_id is not None and student.school_id != scope.school_id:
-        return False
-    if scope.class_ids is not None and student.class_id not in scope.class_ids:
-        return False
-    return True
+    in_school = scope.school_id is None or student.school_id == scope.school_id
+    in_classes = scope.class_ids is None or student.class_id in scope.class_ids
+    return in_school and in_classes
 
 
 def _by_name_then_id(student: Student):
@@ -211,7 +209,7 @@ class MemoryHistoryRepository:
 
     async def add(self, entry: ChangeEntry) -> None:
         self.data.history.append(
-            replace(entry, id=len(self.data.history) + 1, at=entry.at or datetime.now(timezone.utc))
+            replace(entry, id=len(self.data.history) + 1, at=entry.at or datetime.now(UTC))
         )
 
     async def list_for_entity(self, entity_type: str, entity_id: int) -> list[ChangeEntry]:

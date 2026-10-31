@@ -18,13 +18,27 @@ class UnitOfWork(Protocol):
     row are saved together or not at all. Leaving the `async with` block without calling
     commit() rolls everything back."""
 
-    students: StudentRepository
-    teachers: TeacherRepository
-    classes: ClassRepository
-    schools: SchoolRepository
-    users: UserRepository
-    history: HistoryRepository
-    pending: PendingActionRepository
+    # Read-only properties: services only read these, and each adapter may offer its own subclass of the contract.
+    @property
+    def students(self) -> StudentRepository: ...
+
+    @property
+    def teachers(self) -> TeacherRepository: ...
+
+    @property
+    def classes(self) -> ClassRepository: ...
+
+    @property
+    def schools(self) -> SchoolRepository: ...
+
+    @property
+    def users(self) -> UserRepository: ...
+
+    @property
+    def history(self) -> HistoryRepository: ...
+
+    @property
+    def pending(self) -> PendingActionRepository: ...
 
     async def __aenter__(self) -> Self: ...
 

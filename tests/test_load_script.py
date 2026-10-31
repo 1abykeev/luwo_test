@@ -1,5 +1,7 @@
 """The scripted model used by the load test: it must call real tools so the load reaches services and the DB."""
 
+import pytest
+
 from app.agent.llm import LLMRequest, Message, ToolCall, ToolResult
 from app.agent.load_script import load_test_script
 
@@ -44,8 +46,6 @@ def test_after_a_tool_result_the_model_answers_in_text():
 
 
 # ---- review: edge cases of the regexes, and the factory that the memory numbers depend on ----
-
-import pytest
 
 
 @pytest.mark.parametrize("typed, expected", [

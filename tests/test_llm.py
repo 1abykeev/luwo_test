@@ -9,7 +9,6 @@ from app.agent.claude_client import parse_response, to_api_messages, to_api_tool
 from app.agent.fake_client import FakeLLMClient, text_response, tool_response
 from app.agent.llm import LLMRequest, Message, ToolCall, ToolResult, ToolSpec, Usage
 
-
 # ---- our own types ----
 
 def test_a_message_survives_a_round_trip_through_json():

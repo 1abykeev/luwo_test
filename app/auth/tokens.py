@@ -1,7 +1,7 @@
 """JWT creation and reading. The token carries only the user id: role, school and classes
 are always loaded from the database, so nothing inside a token can grant access."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import jwt
 
@@ -12,7 +12,7 @@ ALGORITHM = "HS256"
 
 
 def create_token(user_id: int) -> str:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     payload = {
         "sub": str(user_id),
         "iat": now,

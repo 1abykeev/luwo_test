@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, Field
@@ -83,5 +83,5 @@ async def request_stats(
 ) -> AnalyticsResponse:
     if actor.role != Role.SUPERADMIN:
         raise PermissionDenied("Only a superadmin can view request analytics")
-    since = datetime.now(timezone.utc) - timedelta(days=days)
+    since = datetime.now(UTC) - timedelta(days=days)
     return to_response(await request_log.stats(since), days)

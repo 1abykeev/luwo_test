@@ -188,15 +188,15 @@ Claude: at each trigger below, tell Aktan "time to check deferred item X" before
 | 10 | ~~Structured logging with `conversation_id`, request_log writes, DB latency hooks~~ **DONE on Day 3** (Observer/Telemetry, structlog, Prometheus, request_log, DB engine hook) | - | - |
 | 11 | ~~`app/main.py` calls `create_app()` at import time~~ **DONE on Day 3**: `app` is now created lazily (module `__getattr__`), so importing `app.main` has no side effects | - | - |
 | 12 | DB pool size is fixed (10+10) in `app/db/session.py` | Day 4, before the load test | Make configurable; record the value used in the README |
-| 14 | `trim_history` edge case: last N messages all tool exchanges | Day 4 cleanup | Add a test; make sure it never returns a history that starts with a tool result |
-| 15b | No rate limit or per-user concurrency cap on `/chat` | Day 4, mention in README limitations at least | Optional simple per-user limit |
-| R1 | Residual risk (accepted): the model could confirm a pending action in a LATER message without a real user "yes". Mitigations in code: same conversation only, same user only, 15-minute expiry, history logs source=agent. Buttons are the only fully user-driven path | Day 4, README "Security" section | Document honestly; optionally make buttons the only confirm path |
-| L1 | `ruff` and `mypy` are not installed | Day 4 cleanup, ask Aktan | `pip install ruff mypy`, run, fix what is cheap |
+| 14 | ~~`trim_history` edge case~~ **DONE Day 4**: tests sweep every window size over long tool exchanges; function was already correct, a naive slice fails them | - | - |
+| 15b | ~~No rate limit on `/chat`~~ **DECIDED Day 4**: not implemented, documented in README limitations (proxy-level limit is the right place; a late in-app limit would need mobile 429 handling and load-test config). Ask Aktan if he wants it anyway | - | - |
+| R1 | ~~Residual risk (accepted)~~ **DOCUMENTED**: README Security section states it (same user, same conversation, 15 min, source=agent in history; only the button is fully user-driven) | - | - |
+| L1 | ~~`ruff` and `mypy` not installed~~ **DONE Day 4**: `ruff.toml` added, ruff clean. mypy: fixed the UnitOfWork protocol (read-only properties; adapters now conform); 96 errors remain, mostly 'value may be None' inside `actions.py` apply(); not fixed, documented | - | - |
 
 ### Review fixes already done (first code review)
 #1 honest text after model failure, #2 fake button results (structural fix + prompt rule, measured 12/12), #3 namesake token (key, conversation, expiry) and confirm bound to conversation, #4 per-conversation lock + DB row lock, #5 bcrypt in a thread, #6 secret guard (`APP_ENV`), #15a overall request deadline. Closed after checking: #9 (false alarm, test added), #13 (works, measured). Tests: 331.
 
 ### Day 3 status (done)
-Mobile app (Expo SDK 58, Expo Router, 88 tests, lint and types clean), analytics endpoint, structured logs, Prometheus metrics, Grafana dashboard (24 panels, all queries verified on real data), DAY3_GUIDE. Backend tests: 418 (444 after Day 4 work). Prompt tuned from real UI screenshots (language, picker, no repeated lists, rights questions); language guard in `app/agent/language.py`.
+Mobile app (Expo SDK 58, Expo Router, 88 tests, lint and types clean), analytics endpoint, structured logs, Prometheus metrics, Grafana dashboard (24 panels, all queries verified on real data), DAY3_GUIDE. Backend tests: 418 (450 after Day 4 work). Prompt tuned from real UI screenshots (language, picker, no repeated lists, rights questions); language guard in `app/agent/language.py`.
 Verified by Aktan by hand on the iOS simulator (iPhone 17, Expo Go): login, class list, 'where did she go' card. Android not tried. All flows were verified in the browser build.
 Day 4 reminders still open: #7, #8, #12, #14, #15b, R1, L1 (see the table above). Numbers to carry into Day 4: ~12k tokens per chat request, 98% cache share when warm, agent p50 ~2.5 s / p95 ~4.7 s in a short warm-up, RSS ~160 MB.

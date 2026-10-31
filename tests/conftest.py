@@ -1,6 +1,7 @@
 import asyncio
+import contextlib
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import asyncpg
 import pytest
@@ -46,10 +47,8 @@ def _fresh_test_schema():
             await conn.run_sync(Base.metadata.create_all)
         await engine.dispose()
 
-    try:
+    with contextlib.suppress(Exception):  # no PostgreSQL running: the memory tests still run, the Postgres ones skip
         asyncio.run(rebuild())
-    except Exception:  # no PostgreSQL running: the memory tests still run, the Postgres ones skip
-        pass
 
 
 @pytest.fixture(params=["memory", "postgres"])
@@ -75,7 +74,7 @@ async def uow_factory(request):
 
 class Clock:
     def __init__(self):
-        self.now = datetime(2026, 11, 1, 12, 0, tzinfo=timezone.utc)
+        self.now = datetime(2026, 11, 1, 12, 0, tzinfo=UTC)
 
     def __call__(self) -> datetime:
         return self.now

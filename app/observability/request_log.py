@@ -5,7 +5,7 @@ here when the lists move to Luwo's backend."""
 
 import math
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Protocol
 
 from sqlalchemy import distinct, func, select
@@ -123,7 +123,7 @@ class InMemoryRequestLogStore:
 def _with_time(entry: RequestLogEntry) -> RequestLogEntry:
     from dataclasses import replace
 
-    return replace(entry, at=datetime.now(timezone.utc))
+    return replace(entry, at=datetime.now(UTC))
 
 
 class PostgresRequestLogStore:

@@ -6,7 +6,6 @@ from app.domain.errors import InvalidRequest, NotFound, PermissionDenied
 from app.domain.models import Role
 from tests.helpers import GYMNASIUM, LYCEUM, SCHOOL12, class_id, student_id
 
-
 # ---- actor loading: role/school/classes come from the database ----
 
 async def test_actor_is_built_from_the_database(actor):

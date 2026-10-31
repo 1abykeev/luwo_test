@@ -9,12 +9,12 @@ from app.agent.factory import build_llm_client
 from app.agent.memory import ConversationStore, InMemoryConversationStore, PostgresConversationStore
 from app.auth.passwords import hash_password
 from app.config import settings
+from app.observability.request_log import InMemoryRequestLogStore, PostgresRequestLogStore, RequestLogStore
+from app.observability.telemetry import Telemetry
 from app.repositories.interfaces import UnitOfWorkFactory
 from app.repositories.memory.store import load_demo_world
 from app.repositories.memory.unit_of_work import MemoryUnitOfWork
 from app.repositories.postgres.unit_of_work import PostgresUnitOfWork
-from app.observability.request_log import InMemoryRequestLogStore, PostgresRequestLogStore, RequestLogStore
-from app.observability.telemetry import Telemetry
 from app.services import Services, build_services
 from app.tools import build_registry
 from seed.world import DEMO_PASSWORD

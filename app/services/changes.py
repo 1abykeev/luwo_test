@@ -2,7 +2,7 @@
 
 import uuid
 from collections.abc import Callable
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from app.domain.errors import Conflict, InvalidRequest, NotFound
 from app.domain.models import Actor, PendingAction
@@ -13,7 +13,7 @@ from .views import ConfirmResult, Proposal
 
 
 def utc_now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class ChangeService:

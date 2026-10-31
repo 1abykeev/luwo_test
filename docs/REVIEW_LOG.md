@@ -79,6 +79,14 @@ block of new lines. The main agent appends them here after the review and later 
 - [2026-11-01] [nice] [infra] run_step.sh trap kills only the server (Locust and sampler orphaned on Ctrl-C), port wait never fails, process.csv averages include an idle tail — status: open
 - [2026-11-01] [nice] [infra] locustfile docstring references a non-existent loadtest/README.md; root-user share of "show class" differs from the stated 5/11 — status: open
 - [2026-11-01] [nice] [infra] metrics_report.py: route filter `None` branch is dead, 300-char line, bucket accuracy not stated — status: open
-- [2026-11-01] [nice] [infra] scale_data.py has no guard that the database is the load-test one (missing DATABASE_URL falls back to the dev database) — status: open
+- [2026-11-01] [nice] [infra] scale_data.py has no guard that the database is the load-test one (missing DATABASE_URL falls back to the dev database) — status: fixed — refuses unless the database name ends with _loadtest (checked: refuses on dev, runs on luwo_loadtest, dev DB still 44 students)
 - [2026-11-01] [nice] [backend] DB pool values not logged at startup; session.py line too long — status: open
 - [2026-11-01] [nit] [infra] README "Стенд" does not state APP_ENV=dev/logging settings used in the runs; load_script comment says token charts "believable" but cache_read is 0 — status: open
+
+## Cleanups after Day 4 (2026-11-01)
+
+- [2026-11-01] [nice] [agent] trim_history edge case (window of only tool exchanges) had no test — status: fixed — 6 new tests (window sweep over several shapes); proven to fail on a naive slice
+- [2026-11-01] [nice] [infra] ruff/mypy not installed (L1) — status: fixed — ruff.toml added, ruff clean (62 findings: imports, unused imports, small style items); both tools in requirements.txt
+- [2026-11-01] [nice] [backend] UnitOfWork protocol used writable attributes, so mypy rejected both adapters — status: fixed — read-only properties; no hidden signature mismatch found
+- [2026-11-01] [nice] [backend] mypy still reports 96 errors, mostly Optional narrowing in actions.py apply() — status: wontfix — needs restructuring, no behaviour risk found; documented in README limitations
+- [2026-11-01] [nice] [security] No rate limit on /chat (#15b) — status: wontfix — documented limitation; belongs at proxy level, a late in-app limit needs mobile 429 handling and load-test config

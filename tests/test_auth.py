@@ -1,6 +1,6 @@
 """Login and tokens, through the real HTTP layer (in-memory data, real password hashing)."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import httpx
 import jwt
@@ -79,7 +79,7 @@ async def test_me_works_with_a_token(client):
 
 
 async def test_expired_token_is_rejected(client):
-    past = datetime.now(timezone.utc) - timedelta(hours=1)
+    past = datetime.now(UTC) - timedelta(hours=1)
     token = jwt.encode(
         {"sub": str(user_id("aigul@luwo.test")), "iat": past - timedelta(hours=1), "exp": past},
         settings.jwt_secret, algorithm=ALGORITHM,
@@ -101,7 +101,7 @@ async def test_a_role_claim_inside_the_token_changes_nothing(client):
     # Even a correctly signed token cannot promote its owner: the role is read from the database.
     forged = jwt.encode(
         {"sub": str(user_id("aigul@luwo.test")), "role": "superadmin", "school_id": None,
-         "exp": datetime.now(timezone.utc) + timedelta(hours=1)},
+         "exp": datetime.now(UTC) + timedelta(hours=1)},
         settings.jwt_secret, algorithm=ALGORITHM,
     )
     body = (await client.get("/auth/me", headers=bearer(forged))).json()
@@ -145,6 +145,6 @@ async def test_login_does_not_block_the_event_loop(client):
     await asyncio.sleep(0.03)  # let the ticker tick again, otherwise a freeze would not show up as a gap
     task.cancel()
 
-    longest_freeze = max(b - a for a, b in zip(ticks, ticks[1:]))
+    longest_freeze = max(b - a for a, b in zip(ticks, ticks[1:], strict=False))
     assert login_time > 0.05, "bcrypt should take noticeable time, otherwise this test proves nothing"
     assert longest_freeze < 0.05, f"the event loop froze for {longest_freeze:.3f}s during login"

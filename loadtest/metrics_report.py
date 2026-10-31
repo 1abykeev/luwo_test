@@ -16,7 +16,9 @@ from prometheus_client.parser import text_string_to_metric_families
 
 def load(path: str) -> dict[tuple[str, tuple], float]:
     values: dict[tuple[str, tuple], float] = {}
-    for family in text_string_to_metric_families(open(path).read()):
+    with open(path) as handle:
+        text = handle.read()
+    for family in text_string_to_metric_families(text):
         for sample in family.samples:
             values[(sample.name, tuple(sorted(sample.labels.items())))] = sample.value
     return values
@@ -78,7 +80,7 @@ def main(before_path: str, after_path: str, seconds: float) -> None:
         print(f"DB statements / request: {statements / agent_count:.1f}  ({statements / seconds:.0f} per second)")
     tokens = {kind: total(d, "luwo_llm_tokens_total", kind=kind) for kind in ("input", "output", "cache_read", "cache_write")}
     if agent_count:
-        print(f"tokens / request       : " + ", ".join(f"{k} {v / agent_count:.0f}" for k, v in tokens.items()))
+        print("tokens / request       : " + ", ".join(f"{k} {v / agent_count:.0f}" for k, v in tokens.items()))
 
 
 if __name__ == "__main__":

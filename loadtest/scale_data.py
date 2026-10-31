@@ -10,7 +10,9 @@ import asyncio
 import random
 
 from sqlalchemy import select, text
+from sqlalchemy.engine import make_url
 
+from app.config import settings
 from app.db import models as m
 from app.db.session import SessionFactory, engine
 
@@ -19,7 +21,16 @@ LAST = ["Касымов", "Жумаев", "Смирнова", "Иманов", "�
 STUDENTS_PER_CLASS = 25
 
 
+def refuse_unless_load_test_database() -> None:
+    """DATABASE_URL falls back to the development database when it is not set. Never add thousands of rows there."""
+    name = make_url(settings.database_url).database or ""
+    if not name.endswith("_loadtest"):
+        raise SystemExit(f"Refusing to run: database '{name}' is not a load-test database (its name must end with _loadtest). "
+                         "Set DATABASE_URL, see the top of this file.")
+
+
 async def main() -> None:
+    refuse_unless_load_test_database()
     random.seed(1)
     async with SessionFactory() as session:
         schools = (await session.execute(select(m.School.id))).scalars().all()

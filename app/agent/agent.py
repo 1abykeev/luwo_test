@@ -27,9 +27,9 @@ from app.services import Services
 from app.tools import ToolContext, ToolOutcome, ToolRegistry
 from app.tools.base import banner
 
-from .locks import KeyedLock
 from .language import drop_foreign_preamble
 from .llm import LLMClient, LLMError, LLMRequest, Message, ToolCall, ToolResult, Usage
+from .locks import KeyedLock
 from .memory import ConversationStore, StoredMessage, trim_history
 from .prompt import build_system_prompt
 

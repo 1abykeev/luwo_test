@@ -5,7 +5,7 @@ replaces the data source for lists, chat history stays here."""
 
 import copy
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Protocol
 
 from sqlalchemy import func, select
@@ -63,7 +63,7 @@ class InMemoryConversationStore:
             self._items[conversation_id] = []
         elif self._owners[conversation_id] != user_id:
             raise _unknown()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         self._items[conversation_id] += [
             StoredMessage(copy.deepcopy(i.message), copy.deepcopy(i.blocks), i.at or now) for i in items
         ]

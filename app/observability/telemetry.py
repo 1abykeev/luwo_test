@@ -8,8 +8,8 @@ import functools
 import inspect
 import json
 from collections.abc import Iterator
-from contextlib import contextmanager, nullcontext
-from typing import TYPE_CHECKING, Any, ContextManager, Protocol
+from contextlib import AbstractContextManager, contextmanager, nullcontext
+from typing import TYPE_CHECKING, Any, Protocol
 
 import structlog
 
@@ -23,7 +23,7 @@ if TYPE_CHECKING:  # only for type hints: importing these at run time would be c
 
 
 class Observer(Protocol):
-    def request_scope(self, conversation_id: str, user_id: int) -> ContextManager[None]: ...
+    def request_scope(self, conversation_id: str, user_id: int) -> AbstractContextManager[None]: ...
     def conversation_started(self, conversation_id: str) -> None: ...
     def tool_finished(self, actor: "Actor", tool: str, args: dict, outcome: "ToolOutcome", seconds: float) -> None: ...
     def llm_call_finished(self, seconds: float, usage: Any | None, status: str) -> None: ...
@@ -31,7 +31,7 @@ class Observer(Protocol):
 
 
 class NullObserver:
-    def request_scope(self, conversation_id: str, user_id: int) -> ContextManager[None]:
+    def request_scope(self, conversation_id: str, user_id: int) -> AbstractContextManager[None]:
         return nullcontext()
 
     def conversation_started(self, conversation_id: str) -> None:

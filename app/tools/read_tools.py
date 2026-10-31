@@ -1,6 +1,6 @@
 """Tools that only look things up. They never change data."""
 
-from .base import Tool, ToolContext, ToolOutcome, banner, bool_arg, int_arg, schema, str_arg
+from .base import Tool, ToolContext, ToolOutcome, bool_arg, int_arg, schema, str_arg
 from .render import finding_dict, hit_dict, student_dict, teacher_dict
 
 MAX_SEARCH_RESULTS = 30
