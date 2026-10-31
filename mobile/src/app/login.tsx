@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { friendlyMessage } from '@/api/client';
 import { Button, Eyebrow } from '@/components/ui';
-import { DEMO_PASSWORD, DEMO_USERS } from '@/demo';
+import { DEMO_MODE, DEMO_PASSWORD, DEMO_USERS } from '@/demo';
 import { useSession } from '@/session';
 import { colors, fonts, radius } from '@/theme';
 
@@ -74,6 +74,7 @@ export default function LoginScreen() {
           <Button label="Войти" onPress={() => submit(email, password)} disabled={!canSubmit} loading={busy === email && busy !== null} flex={0} />
         </View>
 
+        {DEMO_MODE ? (
         <View style={styles.demo}>
           <Eyebrow color={colors.periwinkle}>{'// Демо-пользователи'}</Eyebrow>
           <View style={styles.chips}>
@@ -92,6 +93,7 @@ export default function LoginScreen() {
           </View>
           <Text style={styles.hint}>Нажмите, чтобы войти. Пароль демо-аккаунтов: {DEMO_PASSWORD}</Text>
         </View>
+        ) : null}
 
         <Text style={styles.kawaii}>(˶˃ᆺ˂˶) я ИИ-ассистент</Text>
       </ScrollView>

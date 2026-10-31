@@ -180,3 +180,26 @@ async def test_other_origins_get_no_cors_permission(client_factory):
     preflight = await client.options("/chat", headers={
         "Origin": "https://evil.example", "Access-Control-Request-Method": "POST"})
     assert "access-control-allow-origin" not in preflight.headers
+
+
+# ---- review finding: a blank message must not cost a paid model call ----
+
+@pytest.mark.parametrize("blank", [" ", "   ", "\n", "\t \n", " "])
+async def test_a_blank_message_is_rejected_before_it_reaches_the_model(client_factory, blank):
+    client = await client_factory()
+    response = await send(client, blank)
+    assert response.status_code == 422
+
+
+async def test_surrounding_whitespace_is_trimmed_before_the_agent_sees_it(client_factory):
+    client = await client_factory()
+    body = (await send(client, "  покажи список \n")).json()
+    assert body["blocks"][0]["type"] == "class_roster"  # the scripted model matched "список"
+    history = (await client.get("/chat/history", params={"conversation_id": body["conversation_id"]})).json()
+    assert history["messages"][0]["text"] == "покажи список"
+
+
+async def test_the_length_limit_counts_the_trimmed_text(client_factory):
+    client = await client_factory()
+    assert (await send(client, " " * 50 + "я" * 2000)).status_code == 200
+    assert (await send(client, "я" * 2001)).status_code == 422

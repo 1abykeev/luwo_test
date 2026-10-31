@@ -174,6 +174,7 @@ README.md
 - Never report something as working unless it was actually run; show the test output.
 - At the end of each day, give a short summary: what was done, how to run/try it, what is left, and a few questions an interviewer might ask about that part.
 - Explain in plain English. When introducing a concept (repository, interface, service, idempotency), give a one-line plain explanation or an analogy.
+- After every `code-reviewer` run, update `docs/REVIEW_LOG.md`: append the reviewer's new lines, then set each item to open, fixed or wontfix with a reason (the reviewer is read-only and cannot write the log itself).
 - Aktan sometimes wants to run installs and long commands himself. When he says "don't run commands", only write files and tell him what to run.
 
 ## Deferred review items (from the first code review) — REMIND THE USER when the trigger happens
@@ -196,6 +197,6 @@ Claude: at each trigger below, tell Aktan "time to check deferred item X" before
 #1 honest text after model failure, #2 fake button results (structural fix + prompt rule, measured 12/12), #3 namesake token (key, conversation, expiry) and confirm bound to conversation, #4 per-conversation lock + DB row lock, #5 bcrypt in a thread, #6 secret guard (`APP_ENV`), #15a overall request deadline. Closed after checking: #9 (false alarm, test added), #13 (works, measured). Tests: 331.
 
 ### Day 3 status (done)
-Mobile app (Expo SDK 58, Expo Router, 77 tests, lint and types clean), analytics endpoint, structured logs, Prometheus metrics, Grafana dashboard (24 panels, all queries verified on real data), DAY3_GUIDE. Backend tests: 389. Prompt tuned from real UI screenshots (language, picker, no repeated lists, rights questions); language guard in `app/agent/language.py`.
+Mobile app (Expo SDK 58, Expo Router, 88 tests, lint and types clean), analytics endpoint, structured logs, Prometheus metrics, Grafana dashboard (24 panels, all queries verified on real data), DAY3_GUIDE. Backend tests: 418. Prompt tuned from real UI screenshots (language, picker, no repeated lists, rights questions); language guard in `app/agent/language.py`.
 Verified by Aktan by hand on the iOS simulator (iPhone 17, Expo Go): login, class list, 'where did she go' card. Android not tried. All flows were verified in the browser build.
 Day 4 reminders still open: #7, #8, #12, #14, #15b, R1, L1 (see the table above). Numbers to carry into Day 4: ~12k tokens per chat request, 98% cache share when warm, agent p50 ~2.5 s / p95 ~4.7 s in a short warm-up, RSS ~160 MB.

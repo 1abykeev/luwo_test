@@ -202,3 +202,9 @@ async def test_admin_finds_a_transferred_student_in_their_school(services, actor
 async def test_missing_student_search_does_not_leak_other_schools(services, actor):
     findings = await services.students.investigate_missing_student(await actor("aigul@luwo.test"), "Станислав")
     assert findings == []  # a deactivated student of the Gymnasium
+
+
+async def test_a_search_typed_with_a_latin_lookalike_letter_still_finds_the_student(services, actor):
+    typed = "\u0041" + "\u043c\u0438\u0440"  # a Latin A in front of Cyrillic м и р
+    hits = await services.students.search(await actor("aigul@luwo.test"), typed)
+    assert sorted(h.student.full_name for h in hits) == ["Амир Жумаев", "Амир Касымов"]

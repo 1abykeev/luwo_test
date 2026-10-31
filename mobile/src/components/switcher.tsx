@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { friendlyMessage } from '@/api/client';
-import { DEMO_PASSWORD, DEMO_USERS } from '@/demo';
+import { DEMO_MODE, DEMO_PASSWORD, DEMO_USERS } from '@/demo';
 import { useSession } from '@/session';
 import { colors, fonts } from '@/theme';
 import { Button, Eyebrow } from './ui';
@@ -30,8 +30,8 @@ export function UserSwitcher({ visible, currentEmail, onClose }: { visible: bool
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Закрыть" />
       <View style={styles.sheet}>
-        <Eyebrow>{'// Демо-пользователи'}</Eyebrow>
-        <Text style={styles.title}>Сменить пользователя</Text>
+        <Eyebrow>{DEMO_MODE ? '// Демо-пользователи' : '// Аккаунт'}</Eyebrow>
+        <Text style={styles.title}>{DEMO_MODE ? 'Сменить пользователя' : 'Аккаунт'}</Text>
         {DEMO_USERS.map((user) => {
           const current = user.email === currentEmail;
           return (

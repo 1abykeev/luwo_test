@@ -6,8 +6,9 @@ services:
       POSTGRES_PASSWORD: luwo
       POSTGRES_DB: luwo
     ports:
-      # 5433 on the host: 5432 is often taken by a local Postgres
-      - "5433:5432"
+      # 5433 on the host: 5432 is often taken by a local Postgres.
+      # Bound to 127.0.0.1 (all three published ports): other machines on the network must not reach them.
+      - "127.0.0.1:5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -24,7 +25,7 @@ services:
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     ports:
-      - "9090:9090"
+      - "127.0.0.1:9090:9090"
     extra_hosts:
       - "host.docker.internal:host-gateway"  # lets the container reach the backend on Linux too
 
@@ -41,7 +42,7 @@ services:
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
 
 volumes:
   pgdata:

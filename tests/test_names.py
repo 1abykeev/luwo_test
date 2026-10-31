@@ -45,3 +45,51 @@ def test_search_text_needs_two_characters():
 
 def test_school_names_compare_loosely():
     assert normalize_school_name("Лицей №1") == normalize_school_name("лицей 1")
+
+
+# ---- review finding: Latin letters that look like Cyrillic must not hide a namesake ----
+
+LATIN_A_MIR = "\u0041" + "\u043c\u0438\u0440"  # Latin A, then Cyrillic м и р: looks exactly like Амир
+CYRILLIC_AMIR = "\u0410\u043c\u0438\u0440"  # Амир, all Cyrillic
+KASYMOV = "\u041a\u0430\u0441\u044b\u043c\u043e\u0432"  # Касымов, all Cyrillic
+KASYMOV_LATIN_O = "\u041a\u0430\u0441\u044b\u043c" + "\u006f" + "\u0432"  # Касымов with a Latin o
+ERA_CYRILLIC = "\u0415\u0440\u0430"  # Ера: every letter has a Latin lookalike
+ERA_LATIN = "\u0045\u0070\u0061"  # E p a, all Latin: looks identical to the line above
+
+
+def test_a_word_that_mixes_latin_and_cyrillic_letters_is_refused():
+    for bad in (LATIN_A_MIR, f"{CYRILLIC_AMIR} {KASYMOV_LATIN_O}", f"{KASYMOV_LATIN_O}-{CYRILLIC_AMIR}"):
+        with pytest.raises(InvalidRequest, match="Latin and Cyrillic") as error:
+            clean_person_name(bad)
+        assert "word" in error.value.details
+
+
+def test_names_in_one_alphabet_are_fine():
+    assert clean_person_name(f"{CYRILLIC_AMIR} {KASYMOV}") == f"{CYRILLIC_AMIR} {KASYMOV}"
+    assert clean_person_name("Amir Kassymov") == "Amir Kassymov"  # an English-speaking user
+    assert clean_person_name("Анна-Мария") == "Анна-Мария"
+    assert clean_person_name("Amir Касымов") == "Amir Касымов"  # one word per alphabet is not a mixed word
+
+
+def test_comparing_names_ignores_case_spacing_and_lookalike_letters():
+    from app.services.names import name_key
+
+    assert name_key(CYRILLIC_AMIR) == name_key(CYRILLIC_AMIR.upper()) == name_key(f"  {CYRILLIC_AMIR.lower()} ")
+    assert name_key(LATIN_A_MIR) == name_key(CYRILLIC_AMIR)  # the sneaky one
+    assert name_key(ERA_LATIN) == name_key(ERA_CYRILLIC)  # looks identical on screen, so it counts as the same name
+    assert name_key("Amir") != name_key(CYRILLIC_AMIR)  # only A looks alike: genuinely a different string
+
+
+def test_a_search_typed_with_a_lookalike_letter_is_corrected_to_one_alphabet():
+    assert clean_search_text(LATIN_A_MIR) == CYRILLIC_AMIR
+    assert clean_search_text(f"{LATIN_A_MIR} {KASYMOV}") == f"{CYRILLIC_AMIR} {KASYMOV}"
+    assert clean_search_text("Amir") == "Amir"  # no Cyrillic in the word: left alone
+    assert clean_search_text(f"Amir {KASYMOV}") == f"Amir {KASYMOV}"
+
+
+def test_search_variants_cover_both_alphabets_for_a_fully_lookalike_name():
+    from app.services.names import search_variants
+
+    assert set(search_variants(ERA_LATIN)) == {ERA_LATIN, ERA_CYRILLIC}
+    assert set(search_variants(ERA_CYRILLIC)) == {ERA_CYRILLIC, ERA_LATIN}
+    assert search_variants(CYRILLIC_AMIR + " " + KASYMOV)[0] == CYRILLIC_AMIR + " " + KASYMOV  # as typed comes first

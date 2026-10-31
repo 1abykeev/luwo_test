@@ -12,7 +12,7 @@ from app.domain.errors import Conflict, InvalidRequest, NotFound, PermissionDeni
 from app.domain.models import Actor, ChangeEntry, Role, Student, StudentStatus, Teacher
 from app.repositories.interfaces import UnitOfWork
 
-from .names import clean_person_name
+from .names import clean_person_name, name_key, search_variants
 from .permissions import can_access_class, can_access_student, require_teacher_management, scope_for
 
 MAX_STUDENTS_PER_TRANSFER = 60
@@ -108,10 +108,11 @@ class AddStudent:
         cls = await _require_class(uow, actor, params.get("class_id"))
         allow_duplicate = bool(params.get("allow_duplicate"))
 
-        same_name = [
-            s for s in await uow.students.search(full_name, scope_for(actor), include_inactive=True)
-            if s.full_name.casefold() == full_name.casefold()
-        ]
+        found = {}
+        for variant in search_variants(full_name):
+            for s in await uow.students.search(variant, scope_for(actor), include_inactive=True):
+                found[s.id] = s
+        same_name = [s for s in found.values() if name_key(s.full_name) == name_key(full_name)]
         in_class = [s for s in same_name if s.class_id == cls.id]
         if in_class and not allow_duplicate:
             raise Conflict(
@@ -261,10 +262,11 @@ class AddTeacher:
 
         full_name = clean_person_name(params.get("full_name"))
         allow_duplicate = bool(params.get("allow_duplicate"))
-        same_name = [
-            t for t in await uow.teachers.find_by_name(full_name, school.id)
-            if t.is_active and t.full_name.casefold() == full_name.casefold()
-        ]
+        found_teachers = {}
+        for variant in search_variants(full_name):
+            for t in await uow.teachers.find_by_name(variant, school.id):
+                found_teachers[t.id] = t
+        same_name = [t for t in found_teachers.values() if t.is_active and name_key(t.full_name) == name_key(full_name)]
         if same_name and not allow_duplicate:
             raise Conflict(f"A teacher named {full_name} already works at {school.name}",
                            details={"existing": [_teacher_brief(t) for t in same_name]})

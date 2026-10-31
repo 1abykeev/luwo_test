@@ -7,7 +7,10 @@ ConversationId = Field(pattern=r"^[A-Za-z0-9_-]{1,64}$", description="An id retu
 
 class ChatRequest(BaseModel):
     model_config = ConfigDict(
-        json_schema_extra={"example": {"message": "Переведите Алину из 3А в 3Б", "conversation_id": None}}
+        # Whitespace is trimmed BEFORE the length rules run, so "   " is empty and is refused with a 422
+        # instead of costing a paid model call.
+        str_strip_whitespace=True,
+        json_schema_extra={"example": {"message": "Переведите Алину из 3А в 3Б", "conversation_id": None}},
     )
 
     message: str = Field(min_length=1, max_length=2000, description="What the user typed")

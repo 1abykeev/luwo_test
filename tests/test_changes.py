@@ -447,3 +447,61 @@ async def test_both_schools_can_follow_a_student_who_moved_between_schools(servi
     findings = await services.students.investigate_missing_student(lyceum_admin, "Мамытов")
     assert [(f.state, f.current_class) for f in findings] == [("moved_out_of_your_access", None)]
     assert any(e.action == "student_transferred" and e.from_class == "3А" for e in findings[0].events)
+
+
+# ---- review finding: lookalike letters in names ----
+
+async def test_a_name_that_mixes_alphabets_is_refused_when_adding(services, actor):
+    sneaky = "\u0041\u043c\u0438\u0440 \u041a\u0430\u0441\u044b\u043c\u043e\u0432"  # Latin A + Cyrillic мир Касымов
+    aigul = await actor("aigul@luwo.test")
+    with pytest.raises(InvalidRequest, match="Latin and Cyrillic"):
+        await services.changes.propose(aigul, "add_student", {"class_id": class_id(LYCEUM, "4А"), "full_name": sneaky})
+    admin = await actor("admin1@luwo.test")
+    with pytest.raises(InvalidRequest, match="Latin and Cyrillic"):
+        await services.changes.propose(admin, "add_teacher", {"full_name": "\u0410\u0439\u0433\u0443\u043b\u044c" + "\u006f"})
+
+
+async def test_the_namesake_check_still_catches_a_different_case_and_spacing(services, actor):
+    aigul = await actor("aigul@luwo.test")
+    with pytest.raises(Conflict):
+        await services.changes.propose(
+            aigul, "add_student", {"class_id": class_id(LYCEUM, "4А"), "full_name": "  амир   КАСЫМОВ "}
+        )
+
+
+async def test_the_namesake_check_catches_a_name_typed_in_lookalike_latin_letters(services, actor):
+    cyrillic = "\u0415\u0440\u0430"  # Ера: every letter has a Latin lookalike
+    latin = "\u0045\u0070\u0061"  # E p a: looks identical on screen
+    aigul = await actor("aigul@luwo.test")
+    target = {"class_id": class_id(LYCEUM, "4А")}
+
+    stored = await services.changes.propose(aigul, "add_student", {**target, "full_name": cyrillic})
+    await services.changes.confirm(aigul, stored.token)
+
+    with pytest.raises(Conflict):
+        await services.changes.propose(aigul, "add_student", {**target, "full_name": latin})
+
+
+async def test_the_namesake_check_catches_cyrillic_when_the_stored_name_is_latin(services, actor):
+    cyrillic = "\u0415\u0440\u0430"
+    latin = "\u0045\u0070\u0061"
+    aigul = await actor("aigul@luwo.test")
+    target = {"class_id": class_id(LYCEUM, "4А")}
+
+    stored = await services.changes.propose(aigul, "add_student", {**target, "full_name": latin})
+    await services.changes.confirm(aigul, stored.token)
+
+    with pytest.raises(Conflict):
+        await services.changes.propose(aigul, "add_student", {**target, "full_name": cyrillic})
+
+
+async def test_the_teacher_namesake_check_catches_lookalike_latin_letters(services, actor):
+    cyrillic = "\u0415\u0440\u0430"
+    latin = "\u0045\u0070\u0061"
+    admin = await actor("admin1@luwo.test")
+
+    stored = await services.changes.propose(admin, "add_teacher", {"full_name": cyrillic})
+    await services.changes.confirm(admin, stored.token)
+
+    with pytest.raises(Conflict):
+        await services.changes.propose(admin, "add_teacher", {"full_name": latin})
