@@ -26,8 +26,11 @@ npm-debug.log*
 # Docker volumes / local DB data
 pgdata/
 
-# Load test output (keep the summary in README, not raw dumps)
-loadtest/results/*.csv
+# Load test output: keep the small result files (reports, metrics, csv) as evidence for the README,
+# but not the server logs (tens of MB of JSON lines) or per-second history
+loadtest/results/**/server.log
+loadtest/results/**/locust_stats_history.csv
+loadtest/results/campaign.log
 loadtest/results/*.html
 
 # OS / editors

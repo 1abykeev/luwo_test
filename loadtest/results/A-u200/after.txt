@@ -1,0 +1,286 @@
+# HELP luwo_http_requests_total HTTP requests
+# TYPE luwo_http_requests_total counter
+luwo_http_requests_total{method="POST",route="/auth/login",status="200"} 21.0
+luwo_http_requests_total{method="POST",route="/chat",status="200"} 4371.0
+# HELP luwo_http_requests_created HTTP requests
+# TYPE luwo_http_requests_created gauge
+luwo_http_requests_created{method="POST",route="/auth/login",status="200"} 1.7934748615151749e+09
+luwo_http_requests_created{method="POST",route="/chat",status="200"} 1.7934748635985332e+09
+# HELP luwo_http_request_duration_seconds HTTP request duration
+# TYPE luwo_http_request_duration_seconds histogram
+luwo_http_request_duration_seconds_bucket{le="0.05",method="POST",route="/auth/login"} 0.0
+luwo_http_request_duration_seconds_bucket{le="0.1",method="POST",route="/auth/login"} 0.0
+luwo_http_request_duration_seconds_bucket{le="0.25",method="POST",route="/auth/login"} 1.0
+luwo_http_request_duration_seconds_bucket{le="0.5",method="POST",route="/auth/login"} 15.0
+luwo_http_request_duration_seconds_bucket{le="1.0",method="POST",route="/auth/login"} 21.0
+luwo_http_request_duration_seconds_bucket{le="2.0",method="POST",route="/auth/login"} 21.0
+luwo_http_request_duration_seconds_bucket{le="3.0",method="POST",route="/auth/login"} 21.0
+luwo_http_request_duration_seconds_bucket{le="5.0",method="POST",route="/auth/login"} 21.0
+luwo_http_request_duration_seconds_bucket{le="8.0",method="POST",route="/auth/login"} 21.0
+luwo_http_request_duration_seconds_bucket{le="13.0",method="POST",route="/auth/login"} 21.0
+luwo_http_request_duration_seconds_bucket{le="21.0",method="POST",route="/auth/login"} 21.0
+luwo_http_request_duration_seconds_bucket{le="34.0",method="POST",route="/auth/login"} 21.0
+luwo_http_request_duration_seconds_bucket{le="55.0",method="POST",route="/auth/login"} 21.0
+luwo_http_request_duration_seconds_bucket{le="90.0",method="POST",route="/auth/login"} 21.0
+luwo_http_request_duration_seconds_bucket{le="+Inf",method="POST",route="/auth/login"} 21.0
+luwo_http_request_duration_seconds_count{method="POST",route="/auth/login"} 21.0
+luwo_http_request_duration_seconds_sum{method="POST",route="/auth/login"} 9.120777914000428
+luwo_http_request_duration_seconds_bucket{le="0.05",method="POST",route="/chat"} 0.0
+luwo_http_request_duration_seconds_bucket{le="0.1",method="POST",route="/chat"} 0.0
+luwo_http_request_duration_seconds_bucket{le="0.25",method="POST",route="/chat"} 0.0
+luwo_http_request_duration_seconds_bucket{le="0.5",method="POST",route="/chat"} 0.0
+luwo_http_request_duration_seconds_bucket{le="1.0",method="POST",route="/chat"} 0.0
+luwo_http_request_duration_seconds_bucket{le="2.0",method="POST",route="/chat"} 403.0
+luwo_http_request_duration_seconds_bucket{le="3.0",method="POST",route="/chat"} 4368.0
+luwo_http_request_duration_seconds_bucket{le="5.0",method="POST",route="/chat"} 4371.0
+luwo_http_request_duration_seconds_bucket{le="8.0",method="POST",route="/chat"} 4371.0
+luwo_http_request_duration_seconds_bucket{le="13.0",method="POST",route="/chat"} 4371.0
+luwo_http_request_duration_seconds_bucket{le="21.0",method="POST",route="/chat"} 4371.0
+luwo_http_request_duration_seconds_bucket{le="34.0",method="POST",route="/chat"} 4371.0
+luwo_http_request_duration_seconds_bucket{le="55.0",method="POST",route="/chat"} 4371.0
+luwo_http_request_duration_seconds_bucket{le="90.0",method="POST",route="/chat"} 4371.0
+luwo_http_request_duration_seconds_bucket{le="+Inf",method="POST",route="/chat"} 4371.0
+luwo_http_request_duration_seconds_count{method="POST",route="/chat"} 4371.0
+luwo_http_request_duration_seconds_sum{method="POST",route="/chat"} 8612.20346205908
+# HELP luwo_http_request_duration_seconds_created HTTP request duration
+# TYPE luwo_http_request_duration_seconds_created gauge
+luwo_http_request_duration_seconds_created{method="POST",route="/auth/login"} 1.7934748615151849e+09
+luwo_http_request_duration_seconds_created{method="POST",route="/chat"} 1.793474863598562e+09
+# HELP luwo_http_requests_in_flight HTTP requests being handled right now
+# TYPE luwo_http_requests_in_flight gauge
+luwo_http_requests_in_flight 1.0
+# HELP luwo_agent_requests_total Chat requests by type and outcome
+# TYPE luwo_agent_requests_total counter
+luwo_agent_requests_total{outcome="resolved",request_type="show"} 2735.0
+luwo_agent_requests_total{outcome="resolved",request_type="search"} 1233.0
+luwo_agent_requests_total{outcome="resolved",request_type="other"} 403.0
+# HELP luwo_agent_requests_created Chat requests by type and outcome
+# TYPE luwo_agent_requests_created gauge
+luwo_agent_requests_created{outcome="resolved",request_type="show"} 1.793474863588489e+09
+luwo_agent_requests_created{outcome="resolved",request_type="search"} 1.793474870386268e+09
+luwo_agent_requests_created{outcome="resolved",request_type="other"} 1.793474871120461e+09
+# HELP luwo_agent_request_duration_seconds Time to answer one chat request (all model calls and tools)
+# TYPE luwo_agent_request_duration_seconds histogram
+luwo_agent_request_duration_seconds_bucket{le="0.05",request_type="show"} 0.0
+luwo_agent_request_duration_seconds_bucket{le="0.1",request_type="show"} 0.0
+luwo_agent_request_duration_seconds_bucket{le="0.25",request_type="show"} 0.0
+luwo_agent_request_duration_seconds_bucket{le="0.5",request_type="show"} 0.0
+luwo_agent_request_duration_seconds_bucket{le="1.0",request_type="show"} 0.0
+luwo_agent_request_duration_seconds_bucket{le="2.0",request_type="show"} 0.0
+luwo_agent_request_duration_seconds_bucket{le="3.0",request_type="show"} 2732.0
+luwo_agent_request_duration_seconds_bucket{le="5.0",request_type="show"} 2735.0
+luwo_agent_request_duration_seconds_bucket{le="8.0",request_type="show"} 2735.0
+luwo_agent_request_duration_seconds_bucket{le="13.0",request_type="show"} 2735.0
+luwo_agent_request_duration_seconds_bucket{le="21.0",request_type="show"} 2735.0
+luwo_agent_request_duration_seconds_bucket{le="34.0",request_type="show"} 2735.0
+luwo_agent_request_duration_seconds_bucket{le="55.0",request_type="show"} 2735.0
+luwo_agent_request_duration_seconds_bucket{le="90.0",request_type="show"} 2735.0
+luwo_agent_request_duration_seconds_bucket{le="+Inf",request_type="show"} 2735.0
+luwo_agent_request_duration_seconds_count{request_type="show"} 2735.0
+luwo_agent_request_duration_seconds_sum{request_type="show"} 5617.247000000014
+luwo_agent_request_duration_seconds_bucket{le="0.05",request_type="search"} 0.0
+luwo_agent_request_duration_seconds_bucket{le="0.1",request_type="search"} 0.0
+luwo_agent_request_duration_seconds_bucket{le="0.25",request_type="search"} 0.0
+luwo_agent_request_duration_seconds_bucket{le="0.5",request_type="search"} 0.0
+luwo_agent_request_duration_seconds_bucket{le="1.0",request_type="search"} 0.0
+luwo_agent_request_duration_seconds_bucket{le="2.0",request_type="search"} 0.0
+luwo_agent_request_duration_seconds_bucket{le="3.0",request_type="search"} 1233.0
+luwo_agent_request_duration_seconds_bucket{le="5.0",request_type="search"} 1233.0
+luwo_agent_request_duration_seconds_bucket{le="8.0",request_type="search"} 1233.0
+luwo_agent_request_duration_seconds_bucket{le="13.0",request_type="search"} 1233.0
+luwo_agent_request_duration_seconds_bucket{le="21.0",request_type="search"} 1233.0
+luwo_agent_request_duration_seconds_bucket{le="34.0",request_type="search"} 1233.0
+luwo_agent_request_duration_seconds_bucket{le="55.0",request_type="search"} 1233.0
+luwo_agent_request_duration_seconds_bucket{le="90.0",request_type="search"} 1233.0
+luwo_agent_request_duration_seconds_bucket{le="+Inf",request_type="search"} 1233.0
+luwo_agent_request_duration_seconds_count{request_type="search"} 1233.0
+luwo_agent_request_duration_seconds_sum{request_type="search"} 2496.9320000000066
+luwo_agent_request_duration_seconds_bucket{le="0.05",request_type="other"} 0.0
+luwo_agent_request_duration_seconds_bucket{le="0.1",request_type="other"} 0.0
+luwo_agent_request_duration_seconds_bucket{le="0.25",request_type="other"} 0.0
+luwo_agent_request_duration_seconds_bucket{le="0.5",request_type="other"} 0.0
+luwo_agent_request_duration_seconds_bucket{le="1.0",request_type="other"} 0.0
+luwo_agent_request_duration_seconds_bucket{le="2.0",request_type="other"} 403.0
+luwo_agent_request_duration_seconds_bucket{le="3.0",request_type="other"} 403.0
+luwo_agent_request_duration_seconds_bucket{le="5.0",request_type="other"} 403.0
+luwo_agent_request_duration_seconds_bucket{le="8.0",request_type="other"} 403.0
+luwo_agent_request_duration_seconds_bucket{le="13.0",request_type="other"} 403.0
+luwo_agent_request_duration_seconds_bucket{le="21.0",request_type="other"} 403.0
+luwo_agent_request_duration_seconds_bucket{le="34.0",request_type="other"} 403.0
+luwo_agent_request_duration_seconds_bucket{le="55.0",request_type="other"} 403.0
+luwo_agent_request_duration_seconds_bucket{le="90.0",request_type="other"} 403.0
+luwo_agent_request_duration_seconds_bucket{le="+Inf",request_type="other"} 403.0
+luwo_agent_request_duration_seconds_count{request_type="other"} 403.0
+luwo_agent_request_duration_seconds_sum{request_type="other"} 409.15399999999886
+# HELP luwo_agent_request_duration_seconds_created Time to answer one chat request (all model calls and tools)
+# TYPE luwo_agent_request_duration_seconds_created gauge
+luwo_agent_request_duration_seconds_created{request_type="show"} 1.7934748635885131e+09
+luwo_agent_request_duration_seconds_created{request_type="search"} 1.793474870386282e+09
+luwo_agent_request_duration_seconds_created{request_type="other"} 1.793474871120472e+09
+# HELP luwo_conversations_started_total Conversations started
+# TYPE luwo_conversations_started_total counter
+luwo_conversations_started_total 983.0
+# HELP luwo_conversations_started_created Conversations started
+# TYPE luwo_conversations_started_created gauge
+luwo_conversations_started_created 1.793474859972918e+09
+# HELP luwo_llm_calls_total Model calls by result
+# TYPE luwo_llm_calls_total counter
+luwo_llm_calls_total{status="ok"} 8339.0
+# HELP luwo_llm_calls_created Model calls by result
+# TYPE luwo_llm_calls_created gauge
+luwo_llm_calls_created{status="ok"} 1.793474862535588e+09
+# HELP luwo_llm_call_duration_seconds Duration of one model call
+# TYPE luwo_llm_call_duration_seconds histogram
+luwo_llm_call_duration_seconds_bucket{le="0.05"} 0.0
+luwo_llm_call_duration_seconds_bucket{le="0.1"} 0.0
+luwo_llm_call_duration_seconds_bucket{le="0.25"} 0.0
+luwo_llm_call_duration_seconds_bucket{le="0.5"} 0.0
+luwo_llm_call_duration_seconds_bucket{le="1.0"} 2908.0
+luwo_llm_call_duration_seconds_bucket{le="2.0"} 8339.0
+luwo_llm_call_duration_seconds_bucket{le="3.0"} 8339.0
+luwo_llm_call_duration_seconds_bucket{le="5.0"} 8339.0
+luwo_llm_call_duration_seconds_bucket{le="8.0"} 8339.0
+luwo_llm_call_duration_seconds_bucket{le="13.0"} 8339.0
+luwo_llm_call_duration_seconds_bucket{le="21.0"} 8339.0
+luwo_llm_call_duration_seconds_bucket{le="34.0"} 8339.0
+luwo_llm_call_duration_seconds_bucket{le="55.0"} 8339.0
+luwo_llm_call_duration_seconds_bucket{le="90.0"} 8339.0
+luwo_llm_call_duration_seconds_bucket{le="+Inf"} 8339.0
+luwo_llm_call_duration_seconds_count 8339.0
+luwo_llm_call_duration_seconds_sum 8347.294158161008
+# HELP luwo_llm_call_duration_seconds_created Duration of one model call
+# TYPE luwo_llm_call_duration_seconds_created gauge
+luwo_llm_call_duration_seconds_created 1.793474859972928e+09
+# HELP luwo_llm_tokens_total Model tokens by kind: input, output, cache_read, cache_write
+# TYPE luwo_llm_tokens_total counter
+luwo_llm_tokens_total{kind="input"} 2.5823e+06
+luwo_llm_tokens_total{kind="output"} 341620.0
+luwo_llm_tokens_total{kind="cache_read"} 0.0
+luwo_llm_tokens_total{kind="cache_write"} 0.0
+# HELP luwo_llm_tokens_created Model tokens by kind: input, output, cache_read, cache_write
+# TYPE luwo_llm_tokens_created gauge
+luwo_llm_tokens_created{kind="input"} 1.7934748625356328e+09
+luwo_llm_tokens_created{kind="output"} 1.7934748625356538e+09
+luwo_llm_tokens_created{kind="cache_read"} 1.79347486253567e+09
+luwo_llm_tokens_created{kind="cache_write"} 1.7934748625356858e+09
+# HELP luwo_request_tokens Model tokens (all kinds) used by one chat request
+# TYPE luwo_request_tokens histogram
+luwo_request_tokens_bucket{le="250.0"} 0.0
+luwo_request_tokens_bucket{le="500.0"} 0.0
+luwo_request_tokens_bucket{le="1000.0"} 4371.0
+luwo_request_tokens_bucket{le="2500.0"} 4371.0
+luwo_request_tokens_bucket{le="5000.0"} 4371.0
+luwo_request_tokens_bucket{le="10000.0"} 4371.0
+luwo_request_tokens_bucket{le="20000.0"} 4371.0
+luwo_request_tokens_bucket{le="50000.0"} 4371.0
+luwo_request_tokens_bucket{le="+Inf"} 4371.0
+luwo_request_tokens_count 4371.0
+luwo_request_tokens_sum 2.92392e+06
+# HELP luwo_request_tokens_created Model tokens (all kinds) used by one chat request
+# TYPE luwo_request_tokens_created gauge
+luwo_request_tokens_created 1.79347485997295e+09
+# HELP luwo_tool_calls_total Tool calls by tool and result
+# TYPE luwo_tool_calls_total counter
+luwo_tool_calls_total{result="ok",tool="list_class_students"} 1626.0
+luwo_tool_calls_total{result="ok",tool="search_students"} 1233.0
+luwo_tool_calls_total{result="ok",tool="list_classes"} 1109.0
+# HELP luwo_tool_calls_created Tool calls by tool and result
+# TYPE luwo_tool_calls_created gauge
+luwo_tool_calls_created{result="ok",tool="list_class_students"} 1.793474862561931e+09
+luwo_tool_calls_created{result="ok",tool="search_students"} 1.793474869377582e+09
+luwo_tool_calls_created{result="ok",tool="list_classes"} 1.793474869460084e+09
+# HELP luwo_tool_duration_seconds Duration of one tool call
+# TYPE luwo_tool_duration_seconds histogram
+luwo_tool_duration_seconds_bucket{le="0.0005",tool="list_class_students"} 0.0
+luwo_tool_duration_seconds_bucket{le="0.001",tool="list_class_students"} 0.0
+luwo_tool_duration_seconds_bucket{le="0.0025",tool="list_class_students"} 193.0
+luwo_tool_duration_seconds_bucket{le="0.005",tool="list_class_students"} 989.0
+luwo_tool_duration_seconds_bucket{le="0.01",tool="list_class_students"} 1406.0
+luwo_tool_duration_seconds_bucket{le="0.025",tool="list_class_students"} 1527.0
+luwo_tool_duration_seconds_bucket{le="0.05",tool="list_class_students"} 1579.0
+luwo_tool_duration_seconds_bucket{le="0.1",tool="list_class_students"} 1614.0
+luwo_tool_duration_seconds_bucket{le="0.25",tool="list_class_students"} 1625.0
+luwo_tool_duration_seconds_bucket{le="0.5",tool="list_class_students"} 1626.0
+luwo_tool_duration_seconds_bucket{le="1.0",tool="list_class_students"} 1626.0
+luwo_tool_duration_seconds_bucket{le="+Inf",tool="list_class_students"} 1626.0
+luwo_tool_duration_seconds_count{tool="list_class_students"} 1626.0
+luwo_tool_duration_seconds_sum{tool="list_class_students"} 13.870714075997967
+luwo_tool_duration_seconds_bucket{le="0.0005",tool="search_students"} 0.0
+luwo_tool_duration_seconds_bucket{le="0.001",tool="search_students"} 0.0
+luwo_tool_duration_seconds_bucket{le="0.0025",tool="search_students"} 237.0
+luwo_tool_duration_seconds_bucket{le="0.005",tool="search_students"} 730.0
+luwo_tool_duration_seconds_bucket{le="0.01",tool="search_students"} 1054.0
+luwo_tool_duration_seconds_bucket{le="0.025",tool="search_students"} 1162.0
+luwo_tool_duration_seconds_bucket{le="0.05",tool="search_students"} 1198.0
+luwo_tool_duration_seconds_bucket{le="0.1",tool="search_students"} 1222.0
+luwo_tool_duration_seconds_bucket{le="0.25",tool="search_students"} 1233.0
+luwo_tool_duration_seconds_bucket{le="0.5",tool="search_students"} 1233.0
+luwo_tool_duration_seconds_bucket{le="1.0",tool="search_students"} 1233.0
+luwo_tool_duration_seconds_bucket{le="+Inf",tool="search_students"} 1233.0
+luwo_tool_duration_seconds_count{tool="search_students"} 1233.0
+luwo_tool_duration_seconds_sum{tool="search_students"} 10.594473212013327
+luwo_tool_duration_seconds_bucket{le="0.0005",tool="list_classes"} 0.0
+luwo_tool_duration_seconds_bucket{le="0.001",tool="list_classes"} 0.0
+luwo_tool_duration_seconds_bucket{le="0.0025",tool="list_classes"} 32.0
+luwo_tool_duration_seconds_bucket{le="0.005",tool="list_classes"} 160.0
+luwo_tool_duration_seconds_bucket{le="0.01",tool="list_classes"} 242.0
+luwo_tool_duration_seconds_bucket{le="0.025",tool="list_classes"} 273.0
+luwo_tool_duration_seconds_bucket{le="0.05",tool="list_classes"} 476.0
+luwo_tool_duration_seconds_bucket{le="0.1",tool="list_classes"} 806.0
+luwo_tool_duration_seconds_bucket{le="0.25",tool="list_classes"} 1050.0
+luwo_tool_duration_seconds_bucket{le="0.5",tool="list_classes"} 1095.0
+luwo_tool_duration_seconds_bucket{le="1.0",tool="list_classes"} 1108.0
+luwo_tool_duration_seconds_bucket{le="+Inf",tool="list_classes"} 1109.0
+luwo_tool_duration_seconds_count{tool="list_classes"} 1109.0
+luwo_tool_duration_seconds_sum{tool="list_classes"} 94.45953286704207
+# HELP luwo_tool_duration_seconds_created Duration of one tool call
+# TYPE luwo_tool_duration_seconds_created gauge
+luwo_tool_duration_seconds_created{tool="list_class_students"} 1.7934748625619662e+09
+luwo_tool_duration_seconds_created{tool="search_students"} 1.7934748693776379e+09
+luwo_tool_duration_seconds_created{tool="list_classes"} 1.793474869460105e+09
+# HELP luwo_db_query_duration_seconds Duration of one SQL statement
+# TYPE luwo_db_query_duration_seconds histogram
+luwo_db_query_duration_seconds_bucket{le="0.0005",operation="SELECT"} 66989.0
+luwo_db_query_duration_seconds_bucket{le="0.001",operation="SELECT"} 97422.0
+luwo_db_query_duration_seconds_bucket{le="0.0025",operation="SELECT"} 118526.0
+luwo_db_query_duration_seconds_bucket{le="0.005",operation="SELECT"} 123752.0
+luwo_db_query_duration_seconds_bucket{le="0.01",operation="SELECT"} 125949.0
+luwo_db_query_duration_seconds_bucket{le="0.025",operation="SELECT"} 126879.0
+luwo_db_query_duration_seconds_bucket{le="0.05",operation="SELECT"} 127060.0
+luwo_db_query_duration_seconds_bucket{le="0.1",operation="SELECT"} 127108.0
+luwo_db_query_duration_seconds_bucket{le="0.25",operation="SELECT"} 127111.0
+luwo_db_query_duration_seconds_bucket{le="0.5",operation="SELECT"} 127111.0
+luwo_db_query_duration_seconds_bucket{le="1.0",operation="SELECT"} 127111.0
+luwo_db_query_duration_seconds_bucket{le="+Inf",operation="SELECT"} 127111.0
+luwo_db_query_duration_seconds_count{operation="SELECT"} 127111.0
+luwo_db_query_duration_seconds_sum{operation="SELECT"} 131.1952357599166
+luwo_db_query_duration_seconds_bucket{le="0.0005",operation="INSERT"} 2196.0
+luwo_db_query_duration_seconds_bucket{le="0.001",operation="INSERT"} 6889.0
+luwo_db_query_duration_seconds_bucket{le="0.0025",operation="INSERT"} 11294.0
+luwo_db_query_duration_seconds_bucket{le="0.005",operation="INSERT"} 12245.0
+luwo_db_query_duration_seconds_bucket{le="0.01",operation="INSERT"} 12724.0
+luwo_db_query_duration_seconds_bucket{le="0.025",operation="INSERT"} 13022.0
+luwo_db_query_duration_seconds_bucket{le="0.05",operation="INSERT"} 13097.0
+luwo_db_query_duration_seconds_bucket{le="0.1",operation="INSERT"} 13110.0
+luwo_db_query_duration_seconds_bucket{le="0.25",operation="INSERT"} 13113.0
+luwo_db_query_duration_seconds_bucket{le="0.5",operation="INSERT"} 13113.0
+luwo_db_query_duration_seconds_bucket{le="1.0",operation="INSERT"} 13113.0
+luwo_db_query_duration_seconds_bucket{le="+Inf",operation="INSERT"} 13113.0
+luwo_db_query_duration_seconds_count{operation="INSERT"} 13113.0
+luwo_db_query_duration_seconds_sum{operation="INSERT"} 25.64108853385551
+# HELP luwo_db_query_duration_seconds_created Duration of one SQL statement
+# TYPE luwo_db_query_duration_seconds_created gauge
+luwo_db_query_duration_seconds_created{operation="SELECT"} 1.793474861313358e+09
+luwo_db_query_duration_seconds_created{operation="INSERT"} 1.7934748635689049e+09
+# HELP luwo_process_resident_memory_bytes Memory held in RAM by this process
+# TYPE luwo_process_resident_memory_bytes gauge
+luwo_process_resident_memory_bytes 1.67870464e+08
+# HELP luwo_process_cpu_seconds_total CPU time used by this process (user + system)
+# TYPE luwo_process_cpu_seconds_total counter
+luwo_process_cpu_seconds_total 53.081254400000006
+# HELP luwo_process_cpu_percent CPU use since the previous scrape, 100 = one full core
+# TYPE luwo_process_cpu_percent gauge
+luwo_process_cpu_percent 53.5
+# HELP luwo_process_threads Threads in this process
+# TYPE luwo_process_threads gauge
+luwo_process_threads 23.0

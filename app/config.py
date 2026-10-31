@@ -1,4 +1,4 @@
-from pydantic import model_validator
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Only for local development. Starting with it in any other environment is refused.
@@ -15,7 +15,14 @@ class Settings(BaseSettings):
     data_source: str = "postgres"
     database_url: str = "postgresql+asyncpg://luwo:luwo@localhost:5433/luwo"
 
+    # Connections kept open to PostgreSQL, plus extra ones allowed during a burst. Raise them if the load
+    # test shows requests waiting for a free connection (the README records the values used in the measurements).
+    db_pool_size: int = Field(default=10, ge=1)
+    db_max_overflow: int = Field(default=10, ge=0)
+
     llm_provider: str = "claude"  # "claude" or "fake"
+    # With LLM_PROVIDER=fake: seconds the scripted model waits before answering (imitates model latency in load tests)
+    fake_llm_delay: float = Field(default=0.0, ge=0)
     anthropic_api_key: str = ""
     llm_model: str = "claude-haiku-5-5"
     # Thinking mode sent to Claude. "disabled" keeps the tool loop simple and fast.

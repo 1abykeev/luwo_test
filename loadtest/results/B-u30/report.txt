@@ -1,0 +1,19 @@
+step: B-u30  users=30 spawn=10/s duration=60s fake_delay=0s think=0-0s pool=10+10
+--- process
+rss MB: avg 155, max 155
+cpu % of one core: avg 95, max 263
+--- backend metrics (whole test, ramp-up included)
+test length            : 60 s
+/chat requests         : 7737  (128.9 per second)
+/chat 5xx              : 0
+agent requests         : 7737, outcome=error: 0
+agent latency          : p50 79 ms, p95 402 ms
+HTTP /chat latency     : p50 193 ms, p95 738 ms
+model call latency     : p50 25 ms, p95 48 ms
+tool call latency      : p50 20 ms, p95 396 ms
+DB statement latency   : p50 4 ms, p95 13 ms
+DB statements / request: 30.0  (3867 per second)
+tokens / request       : input 591, output 78, cache_read 0, cache_write 0
+requests 7622, failures 0, req/s 129.1
+aggregated: median 190 ms, p95 560 ms, p99 630 ms, max 821.2706659996911 ms
+/chat only: 7609 requests, 0 failed

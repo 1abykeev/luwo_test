@@ -1,8 +1,9 @@
 from app.config import settings
 
 from .claude_client import ClaudeClient
-from .fake_client import FakeLLMClient, text_response
+from .fake_client import FakeLLMClient
 from .llm import LLMClient, LLMError, LLMRequest, LLMResponse
+from .load_script import load_test_script
 
 
 class UnconfiguredClient:
@@ -19,6 +20,6 @@ def build_llm_client() -> LLMClient:
             return UnconfiguredClient()
         return ClaudeClient(settings.anthropic_api_key, settings.llm_model, settings.llm_thinking)
     if settings.llm_provider == "fake":
-        # Only useful to start the server without a key; tests and load tests build their own script.
-        return FakeLLMClient(lambda request: text_response("This is the fake model speaking."))
+        # For load tests and for trying the app without a key: calls read tools only, never changes data.
+        return FakeLLMClient(load_test_script, delay=settings.fake_llm_delay, record=False)
     raise ValueError(f"Unknown LLM_PROVIDER '{settings.llm_provider}'")

@@ -1,0 +1,2 @@
+rss MB: avg 162, max 164
+cpu % of one core: avg 95, max 265
