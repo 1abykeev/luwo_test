@@ -65,3 +65,20 @@ block of new lines. The main agent appends them here after the review and later 
 - [2026-10-31] [nice] [backend] Zero-width-only message (U+200B) passes the whitespace trim — status: open
 - [2026-10-31] [nit] [tests] Blank-message test list has lookalike-looking entries; use \u escapes — status: open
 - [2026-10-31] [nit] [mobile] login.tsx JSX not re-indented inside the DEMO_MODE block — status: open
+
+## Day 4 review, scopes backend + agent + tests + infra (2026-11-01)
+
+- [2026-11-01] [important] [infra] README says "memory ≤190 MB after all steps in a row" but each step restarts the server; no soak test, so "no leak" is overstated — status: fixed — README now says memory levels off inside each step (148→186 MB at 400 users) and that no long soak run was done
+- [2026-11-01] [important] [infra] README "up to one core" contradicts process.csv (265-672% in the first seconds = bcrypt login burst); login burst not documented or measured — status: fixed — README explains the 265-672% login burst (bcrypt threads), steady load ≤100% of one core; login throughput listed as not measured
+- [2026-11-01] [important] [infra] "≈400 concurrent conversations" is the largest step tested, not a measured limit (steady CPU ~89%, tool p95 x3); real Claude will cost more CPU — status: fixed — README says it is the largest step tried, not a limit; real Claude expected to lower it
+- [2026-11-01] [important] [infra] 1 core / 512 MB advice lacks the caveat that the numbers come from an Apple M4 core, and cloud vCPUs are slower — status: fixed — README says numbers are from an Apple M4 core and must be measured on the target machine
+- [2026-11-01] [important] [infra] "DB is not the limit": DB metric excludes pool wait and loop delay; word it as "CPU in our Python" — status: fixed — README wording now: CPU in our Python code (about 31 SQL statements per request); notes the DB timer excludes pool wait
+- [2026-11-01] [important] [security] LLM_PROVIDER=fake allowed outside APP_ENV=dev, and unknown provider values are not rejected at startup — status: fixed — config validator refuses fake outside APP_ENV=dev and rejects unknown providers; 5 new tests
+- [2026-11-01] [important] [infra] 7 locust_stats_history.csv files staged although now gitignored (git rm --cached) — status: fixed — `git rm --cached` done; 0 history files staged
+- [2026-11-01] [important] [tests] No test for the fake provider factory (record=False, delay), pool settings reaching the engine, FAKE_LLM_DELAY validation; load-script regex edge cases (punctuation in search, "2 и 3", tool_results with text) untested — status: fixed — tests added for factory (record=False, delay), pool reaching the engine, FAKE_LLM_DELAY validation, regex edge cases; found and fixed 2 real regex bugs (punctuation in search names, '2 и 3' read as class 2И)
+- [2026-11-01] [nice] [infra] run_step.sh trap kills only the server (Locust and sampler orphaned on Ctrl-C), port wait never fails, process.csv averages include an idle tail — status: open
+- [2026-11-01] [nice] [infra] locustfile docstring references a non-existent loadtest/README.md; root-user share of "show class" differs from the stated 5/11 — status: open
+- [2026-11-01] [nice] [infra] metrics_report.py: route filter `None` branch is dead, 300-char line, bucket accuracy not stated — status: open
+- [2026-11-01] [nice] [infra] scale_data.py has no guard that the database is the load-test one (missing DATABASE_URL falls back to the dev database) — status: open
+- [2026-11-01] [nice] [backend] DB pool values not logged at startup; session.py line too long — status: open
+- [2026-11-01] [nit] [infra] README "Стенд" does not state APP_ENV=dev/logging settings used in the runs; load_script comment says token charts "believable" but cache_read is 0 — status: open

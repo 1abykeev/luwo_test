@@ -8,11 +8,13 @@ import re
 from .fake_client import text_response, tool_response
 from .llm import LLMRequest, LLMResponse, Usage
 
-# "4А", "3 б", "11Б": a class name inside a sentence
-_CLASS = re.compile(r"\b(\d{1,2})\s?([А-Яа-яA-Za-z])\b")
-_SEARCH = re.compile(r"(?:найди|найти|поиск|где)\s+(\S{2,})", re.IGNORECASE)
+# "4А", "3 б", "11Б": a class name inside a sentence. Only the parallels А-Г, so "2 и 3 вопроса" is not a class.
+_CLASS = re.compile(r"\b(\d{1,2})\s?([А-Га-г])\b")
+# The name stops at punctuation: "Найди Амир, пожалуйста" -> "Амир"; hyphens stay ("Анна-Мария")
+_SEARCH = re.compile(r"(?:найди|найти|поиск|где)\s+([\w-]{2,})", re.IGNORECASE)
 
-# Rough size of a real request (see the README measurements), so token charts look believable in a load test
+# A made-up, small token count per answer. The real numbers come from the run on Claude (the fake model has no cache,
+# so cache_read stays 0 here)
 _USAGE = Usage(input_tokens=500, output_tokens=60)
 
 

@@ -6,7 +6,7 @@ conversation. The mix is mostly "show a class list", some searches, some "which 
 off-topic. It never changes data: with LLM_PROVIDER=fake the scripted model calls read tools only, and the real
 Claude run uses the same read-only messages.
 
-Run (server must be up, see loadtest/README.md):
+Run (the server must be up; usually you use loadtest/run_step.sh, see the README section on capacity):
     locust -f loadtest/locustfile.py --headless -u 20 -r 5 -t 2m --host http://127.0.0.1:8000
 
 Think time between messages: THINK_MIN / THINK_MAX seconds (default 1 and 3). Use 0 and 0 to push the server
@@ -32,6 +32,12 @@ ACCOUNTS = [
 NAMES = ["Амир", "Алина", "Данияр", "Эрмек", "Касымов"]
 
 _tokens: dict[str, str] = {}  # email -> JWT, shared by all virtual users of this process
+
+# If set, one line per answered message is appended here: how the tokens grow as a conversation gets longer
+TOKENS_CSV = os.environ.get("TOKENS_CSV")
+if TOKENS_CSV:
+    with open(TOKENS_CSV, "w") as handle:
+        handle.write("message_in_conversation,request_type,llm_calls,input_tokens,cached_tokens,output_tokens,duration_ms\n")
 
 
 class ChatUser(HttpUser):
@@ -64,6 +70,12 @@ class ChatUser(HttpUser):
                 return
             body = response.json()
             self.conversation_id = body["conversation_id"]
+            meta = body["meta"]
+            if TOKENS_CSV:
+                with open(TOKENS_CSV, "a") as handle:
+                    position = (self.sent - 1) % MESSAGES_PER_CONVERSATION + 1
+                    handle.write(f"{position},{meta['request_type']},{meta['llm_calls']},{meta['input_tokens']},"
+                                 f"{meta['cached_tokens']},{meta['output_tokens']},{meta['duration_ms']}\n")
             if body["meta"]["outcome"] == "error":  # the agent answered, but the request failed inside
                 response.failure("agent outcome: error")
 

@@ -50,6 +50,11 @@ class Settings(BaseSettings):
     def check_secret(self) -> "Settings":
         if self.log_user_text is None:
             self.log_user_text = self.app_env == "dev"
+        if self.llm_provider not in ("claude", "fake"):
+            raise ValueError(f"Unknown LLM_PROVIDER '{self.llm_provider}': use 'claude' or 'fake'")
+        if self.llm_provider == "fake" and self.app_env != "dev":
+            # The scripted model answers from a list of canned replies; in a real deployment it would pass for Claude.
+            raise ValueError("LLM_PROVIDER=fake is only allowed with APP_ENV=dev")
         if len(self.jwt_secret) < MIN_SECRET_LENGTH:
             raise ValueError(f"JWT_SECRET must be at least {MIN_SECRET_LENGTH} characters long")
         if self.app_env != "dev" and self.jwt_secret == DEV_JWT_SECRET:

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# One measured load-test step against a fresh server on port 8001 (LLM_PROVIDER=fake) and the load-test database.
+# One measured load-test step against a fresh server on port 8001 and the load-test database.
+# The model is the fake one unless you run it with LLM_PROVIDER=claude (then it uses the key from .env and costs money).
 #
 #   loadtest/run_step.sh <name> <users> <spawn_rate> <seconds> <fake_delay> <think_min> <think_max> [pool_size] [overflow]
 #
@@ -21,7 +22,7 @@ for _ in $(seq 1 60); do lsof -ti :$PORT -sTCP:LISTEN > /dev/null 2>&1 || break;
 if lsof -ti :$PORT -sTCP:LISTEN > /dev/null 2>&1; then echo "port $PORT is still busy" >&2; exit 1; fi
 
 export DATABASE_URL=postgresql+asyncpg://luwo:luwo@localhost:5433/luwo_loadtest
-LLM_PROVIDER=fake FAKE_LLM_DELAY=$DELAY DB_POOL_SIZE=$POOL DB_MAX_OVERFLOW=$OVERFLOW \
+LLM_PROVIDER=${LLM_PROVIDER:-fake} FAKE_LLM_DELAY=$DELAY DB_POOL_SIZE=$POOL DB_MAX_OVERFLOW=$OVERFLOW \
   uvicorn app.main:app --host 127.0.0.1 --port $PORT --log-level warning > "$OUT/server.log" 2>&1 &
 SERVER=$!
 trap 'kill $SERVER 2>/dev/null || true; wait $SERVER 2>/dev/null || true' EXIT
@@ -40,7 +41,7 @@ curl -s http://127.0.0.1:$PORT/metrics > "$OUT/before.txt"
 python loadtest/sample_process.py $SERVER $((SECONDS_RUN + 5)) "$OUT/process.csv" > "$OUT/process.txt" &
 SAMPLER=$!
 
-THINK_MIN=$THINK_MIN THINK_MAX=$THINK_MAX locust -f loadtest/locustfile.py --headless \
+TOKENS_CSV="$OUT/tokens.csv" THINK_MIN=$THINK_MIN THINK_MAX=$THINK_MAX locust -f loadtest/locustfile.py --headless \
   -u "$USERS" -r "$RATE" -t "${SECONDS_RUN}s" --host http://127.0.0.1:$PORT \
   --csv "$OUT/locust" --only-summary > "$OUT/locust.txt" 2>&1 || true
 

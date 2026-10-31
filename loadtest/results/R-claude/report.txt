@@ -1,0 +1,19 @@
+step: R-claude  users=5 spawn=5/s duration=150s fake_delay=0s think=2-4s pool=10+10
+--- process
+rss MB: avg 138, max 159
+cpu % of one core: avg 4, max 95
+--- backend metrics (whole test, ramp-up included)
+test length            : 150 s
+/chat requests         : 156  (1.0 per second)
+/chat 5xx              : 0
+agent requests         : 156, outcome=error: 0
+agent latency          : p50 1763 ms, p95 3267 ms
+HTTP /chat latency     : p50 1783 ms, p95 3267 ms
+model call latency     : p50 1153 ms, p95 1927 ms
+tool call latency      : p50 10 ms, p95 247 ms
+DB statement latency   : p50 1 ms, p95 3 ms
+DB statements / request: 24.8  (26 per second)
+tokens / request       : input 5, output 106, cache_read 13585, cache_write 721
+requests 161, failures 0, req/s 1.1
+aggregated: median 1800 ms, p95 3100 ms, p99 3400 ms, max 3790.850749999663 ms
+/chat only: 156 requests, 0 failed
