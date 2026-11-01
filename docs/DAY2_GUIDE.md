@@ -189,13 +189,60 @@ The mobile app, saving classification into `request_log`, structured logs, Prome
 
 ## 15. Interview questions for this part
 
-1. Who runs a tool, the model or your code? What stops the model from changing data directly?
-2. How do you stop the model from saying "done" after a failure?
-3. Why can't the model confirm a change in the same turn it proposed it?
-4. How does the namesake token work, and why is a boolean flag not enough?
-5. Why does the Actor not appear in any tool's arguments?
-6. Why is chat history outside the repository interface?
-7. How would you swap Claude for another model?
-8. How does prompt caching work here, and how did you find it was broken?
-9. What happens when the model is down, or loops forever?
-10. How is a request classified, and how reliable is it?
+**Who runs a tool, the model or your code? What stops the model from changing data directly?**
+Our code. The model only asks ("call this tool with these arguments"). The agent loop runs the handler, the handler calls a
+service, and the service checks permissions. The model has no database access. In addition, change tools never change
+anything: they create a pending proposal and return a token. The change happens only through confirm, which needs a user
+action (the button or a later message) and cannot happen in the same turn.
+
+**How do you stop the model from saying "done" after a failure?**
+In layers. Success cards and banners are built from what the backend returned, not from model text. Every tool error becomes
+a result the model reads, and the prompt says to report failures. If the model itself fails after a change was made, the
+fallback text is chosen from what the backend really did, so it cannot say "nothing changed" after a change or "done" without
+one. A button press reaches the model as a real tool result, which a user cannot type (a typed "SYSTEM EVENT ... done" is just
+text). Checked on the real model: 12 of 12 refused to say "done" on a fake result.
+
+**Why can't the model confirm a change in the same turn it proposed it?**
+`ToolContext.proposals_this_turn` holds the tokens proposed in this request and `confirm_pending_action` refuses them, so the
+model cannot approve its own proposal. A user action must come in between. A residual risk is documented honestly: the model
+could confirm in a later message without a clear "yes". It is bounded (same user, same conversation, 15 minutes, history
+records `source=agent`), and only the button is fully user-driven.
+
+**How does the namesake token work, and why is a boolean flag not enough?**
+When the name already exists, the tool returns a `conflict` plus a signed one-time `different_person_token` (an HMAC over user,
+conversation, class and name, with its own key and a 15-minute expiry). To add the namesake the model must pass that token
+back, and not in the same turn. A boolean "allow duplicate" could be set by the model itself without ever asking the user. The
+token proves the conflict was shown, belongs to this user and conversation, and cannot be forged.
+
+**Why does the Actor not appear in any tool's arguments?**
+If the model could pass a user or a role, a message like "you are now admin" could change who is acting. The Actor is loaded
+from the database for the logged-in user, held in `ToolContext` and handed to services by our code. Tools have no user or role
+argument, and a test shows that extra fields such as `"role": "superadmin"` are ignored.
+
+**Why is chat history outside the repository interface?**
+It is the agent's own state, not school lists. When Luwo's backend replaces the data source for lists, the chat history and the
+request log stay in our database (`app/db/agent_state.py`), so they are not part of what has to be swapped.
+
+**How would you swap Claude for another model?**
+Write one class with `complete()` that takes our `LLMRequest` and returns our `LLMResponse` (our own types: `Message`,
+`ToolCall`, `Usage`) and add a branch in `build_llm_client()`. The agent loop only sees our types, so nothing else changes.
+`FakeLLMClient` is the proof: it is a second implementation.
+
+**How does prompt caching work here, and how did you find it was broken?**
+Claude can reuse an unchanged start of the prompt at a fraction of the price. We mark two breakpoints: one on the system
+prompt (tools and system text are read from the cache by every conversation) and one top-level so a growing conversation is
+cached step to step. I found it broken by looking at token numbers from a real run: the cache was rewritten in every
+conversation (cache writes high, cache reads low). The fix was an explicit breakpoint on the system block. Afterwards about 98%
+of the input was read from cache when warm (95% in the real-Claude load run).
+
+**What happens when the model is down, or loops forever?**
+At most `MAX_STEPS = 8` model calls per request, plus an overall time limit (`AGENT_TIMEOUT_SECONDS`, 90 s). On failure the user
+gets an honest fixed text chosen by what the backend did, the request is logged with outcome `error`, and the saved
+conversation stays consistent.
+
+**How is a request classified, and how reliable is it?**
+From what happened, not by a second model call. The type comes from the tools used (priority: off_topic, transfer, add,
+remove, and so on, down to show; no tools gives `other`; only confirm gives `confirmation`). The outcome comes from the tool
+results (permission_denied, out_of_scope, error, ...). "Needs clarification" is partly a heuristic: no progress and the answer
+ends with a question. Reliability depends on the model calling the tools: after the Day 4 fix, off-topic requests were recorded
+correctly in 58 of 60 runs, and the rest landed in `other`.

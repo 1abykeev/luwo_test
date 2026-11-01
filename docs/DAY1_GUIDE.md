@@ -172,10 +172,43 @@ The agent, `LLMClient`, tools, `/chat`, README content, the mobile app, analytic
 
 ## 14. Interview questions for this part
 
-1. What does the unit of work give you, and what would break without it?
-2. How do you stop a double tap on Confirm from running a change twice?
-3. Why does the token only contain the user id?
-4. Why does `propose` call the same `plan()` that `confirm` calls?
-5. How would you plug in Luwo's REST API?
-6. Why do the same tests run on two adapters?
-7. Why is another school's student reported as "not found" and not "forbidden"?
+**What does the unit of work give you, and what would break without it?**
+One business operation is one transaction. All repositories inside it share the same database session, so a change and
+its history row are saved together or not at all (`commit()` at the end; leaving the block without it rolls everything
+back). Without it a student could be moved while the history row failed to save, or the other way round, and a failure in
+the middle would leave half-finished data. The in-memory adapter works on a copy and drops it when you do not commit, so
+it behaves the same way.
+
+**How do you stop a double tap on Confirm from running a change twice?**
+`pending.claim()` is one SQL statement, `UPDATE ... WHERE status='pending'` (and not expired), so the database lets exactly
+one caller win. The second tap finds nothing to claim, re-reads the row, sees it was already confirmed and returns the
+stored result with `already_applied=True`. Nothing runs twice. Claiming, re-checking, changing the data and writing history
+are one transaction, so if anything fails the claim is rolled back with the rest. Tests confirm the same token several
+times, including at once, and check the change happened once.
+
+**Why does the token only contain the user id?**
+Role, school and classes are loaded from the database on every request, so nothing inside a token can grant access and
+nothing can go stale. A demoted admin or a removed teacher is affected on the very next request. Even a correctly signed
+token that claims `role: superadmin` changes nothing (a test checks it). Tokens must also carry an expiry and a subject.
+
+**Why does `propose` call the same `plan()` that `confirm` calls?**
+`plan()` checks the rules and describes what would happen; `apply()` does it. Propose runs `plan()` to validate and to show
+the user a summary. Confirm runs it again because things can change in between: the student was moved, the user lost their
+rights, the class changed. So permissions and state are checked at the moment of execution, not only when the card was
+shown. Using one function for both means the two steps can never disagree.
+
+**How would you plug in Luwo's REST API?**
+Write a `UnitOfWork` with the repositories (students, teachers, classes, schools, plus users, history and pending) that call
+the REST API or MCP server, add one branch to `build_uow_factory()` in `app/container.py` selected by `DATA_SOURCE`, and add
+the adapter to the `uow_factory` test fixture: the same service tests must pass. Agent, tools and services do not change.
+Caveats (written in the README): the adapter must apply the `Scope` filter, login reads users through the unit of work, and
+REST cannot give "change plus history in one transaction", so history and pending would stay in our database.
+
+**Why do the same tests run on two adapters?**
+It is the proof that services depend only on the interface, and it catches an adapter that breaks the contract. For example
+an adapter that ignored the `Scope` filter would fail the permission tests. A new adapter is accepted when the same tests
+pass on it.
+
+**Why is another school's student reported as "not found" and not "forbidden"?**
+"Forbidden" would confirm that the id exists. With "not found", nobody can probe ids to discover students of other schools:
+an id outside your scope looks exactly like one that does not exist.

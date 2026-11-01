@@ -108,12 +108,50 @@ an answer without a result counted as success) made 3 and 1 tests fail.
 
 ## 6. Interview questions for this part
 
-1. Why are the cards drawn from blocks and not from the model's text?
-2. How does the app know a confirmation was already used after you reload the chat?
-3. What happens in the app when the server is down? When the token is rejected?
-4. What is label cardinality and where could it have gone wrong here?
-5. How do you get p95 database time without changing any repository?
-6. How do you get "tokens per conversation" without a conversation-id label?
-7. What do you log, and how would you keep personal data out of the logs?
-8. How do you make sure monitoring cannot take the chat down?
-9. What did you find by looking at the real app that tests had not found?
+**Why are the cards drawn from blocks and not from the model's text?**
+Blocks are structured data built by our backend from tool results (class roster, confirmation, student card, ...). The app
+draws real data, so the model cannot invent a student or a button, and the numbers on a card are always the backend's. The
+model's text is only the commentary, and the prompt forbids writing the list out again. It also lets the app draw a
+Confirm/Cancel card with a real token.
+
+**How does the app know a confirmation was already used after you reload the chat?**
+The state is derived from data, not stored in the app. History returns messages together with their cards, and a confirmation
+card counts as used when a later `result` card carries the same token. Even if someone pressed it again, the server is
+idempotent: it answers "already done" and changes nothing.
+
+**What happens in the app when the server is down? When the token is rejected?**
+Server unreachable: the message stays in the chat with a "Повторить" button, the saved login is kept, and a friendly "no
+connection" message is shown. Token rejected (401): the session is wiped and the app goes back to the login screen.
+
+**What is label cardinality and where could it have gone wrong here?**
+A Prometheus label creates a separate time series for every distinct value. If metrics were labeled with a user id, a
+conversation id or the raw URL, the number of series would grow without limit and memory would blow up. Our labels come from
+small fixed sets (route template, request type, tool name), unknown URLs share one `unmatched` label so a scanner cannot flood
+the metrics, and a test checks this.
+
+**How do you get p95 database time without changing any repository?**
+A SQLAlchemy engine event hook times every statement (before and after cursor execute) and feeds a histogram. The repositories
+know nothing about it (on Day 4 the hook moved to `app/db/instrumentation.py`, so upper layers stay free of database code).
+Prometheus then computes p95 from the histogram.
+
+**How do you get "tokens per conversation" without a conversation-id label?**
+Two counters with no per-conversation label: total tokens and conversations started. Tokens per conversation is
+`increase(tokens) / increase(conversations started)` over the selected time range, which is what the dashboard panel computes.
+There is also a histogram of tokens per request.
+
+**What do you log, and how would you keep personal data out of the logs?**
+One JSON line per event, with the conversation id, user id and request id: conversation started, each tool call, the request
+summary (type, outcome, tools, tokens, duration) and the HTTP line. Message text and tool arguments are logged only when
+`LOG_USER_TEXT` is on (default on in development, off elsewhere), and confirmation tokens are redacted. Messages can contain
+children's names, so a real deployment should keep it off.
+
+**How do you make sure monitoring cannot take the chat down?**
+The `Telemetry` observer wraps every method so an exception inside it is swallowed, the request-log write is best effort, the
+HTTP metrics use a light ASGI middleware, and Prometheus and Grafana are separate optional containers. If monitoring breaks,
+chats keep working.
+
+**What did you find by looking at the real app that tests had not found?**
+Using the real model and the app: English replies, lists written out again under the card, a missing student picker, rights
+questions answered without calling the backend (wrong analytics label), the cache being rewritten every conversation, and an
+English banner. Each was fixed with a prompt rule, the language guard or a structural change, and measured on the real model
+(for example rights questions answered without the backend went from 6 of 32 to 1 of 32).
