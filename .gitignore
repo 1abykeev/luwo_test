@@ -43,3 +43,6 @@ loadtest/results/*.html
 
 # Local Claude Code settings inside the mobile app (a plugin switch, not project code)
 mobile/.claude/
+
+# Files written by make up (pids and logs)
+.run/

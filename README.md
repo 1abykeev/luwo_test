@@ -14,7 +14,23 @@ AI-агент, который через обычный чат помогает 
 
 ## Быстрый старт
 
-Нужно: Python 3.11+ (проверено на 3.14), Docker, ключ Anthropic API.
+Нужно: Python 3.11+ (проверено на 3.14), Docker (запущенный), Node.js, ключ Anthropic API.
+
+**Одной командой** (macOS и Linux):
+
+```bash
+cp .env.example .env          # впишите ANTHROPIC_API_KEY в .env (файл не попадает в git)
+make up                       # база, миграции, тестовые данные, backend, приложение, Prometheus, Grafana
+```
+
+В конце `make up` печатает ссылки: документация API (`http://localhost:8000/docs`), приложение в браузере
+(`http://localhost:8081`), Prometheus (`:9090`) и Grafana (`:3000`), а также демо-логины. Первый запуск дольше
+остальных: ставятся пакеты Python и Node. Остальные команды: `make down` (остановить всё, данные базы сохраняются),
+`make status`, `make logs` (лог backend), `make mobile` (приложение для iOS-симулятора или Expo Go),
+`make reset` (пересоздать демо-данные), `make test`, `make help`. Для настоящего телефона или Prometheus на Linux:
+`make up HOST=0.0.0.0` (это открывает `/docs` и `/metrics` для вашей сети).
+
+**Или вручную, по шагам** (то же самое, что делает `make up`):
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
