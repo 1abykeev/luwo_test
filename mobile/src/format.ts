@@ -55,7 +55,7 @@ export function eventLine(item: HistoryItem): { text: string; hidden: boolean } 
       return { text: `Возвращён(а) в ${to ?? from ?? 'класс'}`, hidden: from === null && to === null };
     case 'student_transferred':
       return {
-        text: `Переведён(а) ${from ? `из ${from}` : 'из закрытого класса'} ${to ? `в ${to}` : 'в закрытый класс'}`,
+        text: `Переведён(а) ${from ? `из ${from}` : 'из класса вне вашего доступа'} ${to ? `в ${to}` : 'в класс вне вашего доступа'}`,
         hidden: from === null || to === null,
       };
     default:

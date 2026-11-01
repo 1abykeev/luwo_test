@@ -42,7 +42,7 @@ export function StudentCardView({ block }: { block: Of<'student_card'> }) {
 const STATES: Record<Finding['state'], { label: string; tone: 'ok' | 'gray' | 'lock' }> = {
   active: { label: 'В списке', tone: 'ok' },
   deactivated: { label: 'Удалён из класса', tone: 'gray' },
-  moved_out_of_your_access: { label: 'Переведён в закрытый класс', tone: 'lock' },
+  moved_out_of_your_access: { label: 'Переведён в класс вне вашего доступа', tone: 'lock' },
 };
 
 export function InvestigationCard({ block }: { block: Of<'investigation'> }) {

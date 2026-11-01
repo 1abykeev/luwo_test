@@ -208,7 +208,8 @@ const styles = StyleSheet.create({
     marginTop: 2,
     marginBottom: 6,
   },
-  chip: { alignSelf: 'flex-start', borderRadius: radius.pill, paddingHorizontal: 9, paddingVertical: 2 },
+  // flexShrink: a long label ("Переведён в класс вне вашего доступа") wraps inside the chip instead of running off a narrow card
+  chip: { alignSelf: 'flex-start', flexShrink: 1, borderRadius: radius.pill, paddingHorizontal: 9, paddingVertical: 2 },
   chipText: { fontFamily: fonts.bodySemibold, fontSize: 10.5, letterSpacing: 0.4, textTransform: 'uppercase' },
   row: {
     flexDirection: 'row',

@@ -41,7 +41,11 @@ describe('history lines', () => {
   });
   test('a transfer into a class the user may not see is marked hidden and never invents a name', () => {
     const line = eventLine({ action: 'student_transferred', date: null, from_class: '4А', to_class: null });
-    expect(line).toEqual({ text: 'Переведён(а) из 4А в закрытый класс', hidden: true });
+    expect(line).toEqual({ text: 'Переведён(а) из 4А в класс вне вашего доступа', hidden: true });
+  });
+  test('a transfer out of a class the user may not see reads the same way', () => {
+    const line = eventLine({ action: 'student_transferred', date: null, from_class: null, to_class: '4А' });
+    expect(line).toEqual({ text: 'Переведён(а) из класса вне вашего доступа в 4А', hidden: true });
   });
   test('added, removed and restored', () => {
     expect(eventLine({ action: 'student_added', date: null, from_class: null, to_class: '4А' }).text).toBe('Добавлен(а) в 4А');
