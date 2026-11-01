@@ -9,7 +9,6 @@ In the interactive mode, type  /yes  or  /no  to press the Confirm / Cancel butt
 last confirmation card, and  /quit  to leave."""
 
 import asyncio
-import json
 import sys
 
 from app.agent.agent import Agent, ChatResult

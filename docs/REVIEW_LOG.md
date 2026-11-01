@@ -95,3 +95,9 @@ block of new lines. The main agent appends them here after the review and later 
 
 - [2026-11-01] [important] [agent] README claimed the upper layers never import the database, but importing app.agent.agent or app.observability.telemetry loaded SQLAlchemy, asyncpg and app.db (Postgres stores in agent/memory.py and observability/request_log.py, SQL hooks in observability/metrics.py) — status: fixed — stores moved to app/db/agent_state.py, SQL hooks to app/db/instrumentation.py; new tests/test_layers.py (fresh-interpreter import check, 10 modules)
 - [2026-11-01] [nice] [docs] "Swap the data source" section did not mention that search relies on the adapter applying Scope, that login reads users through the UnitOfWork, or that REST cannot keep change+history in one transaction — status: fixed — section rewritten, labelled as not tested on a real REST adapter
+
+## Role pass with the real Claude (2026-11-01)
+
+- [2026-11-01] [important] [agent] English-speaking user got a Russian reply (0 of 6 in English): prompt said the language was "usually Russian" — status: fixed — prompt now follows the user's own language; 20 of 21 later runs English (one Russian answer seen inside a full pass); test guards the prompt text
+- [2026-11-01] [important] [agent] "Удалите Амира Жумаева" made the model ask "which Амир?" in about a third of the runs (the surname was in a declined form) — status: fixed — prompt rule about Russian name endings and "the surname decides"; 12 of 12 clean afterwards; test guards the prompt text
+- [2026-11-01] [nice] [tests] Test run showed 145 skipped when Docker was not running (PostgreSQL tests skip silently) — status: wontfix — by design (memory adapter tests still run); remember to start Docker before trusting a green run: look for "1 skipped", not "145 skipped"

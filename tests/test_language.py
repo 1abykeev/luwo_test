@@ -54,3 +54,19 @@ def test_english_users_get_english_replies_untouched(typed):
 def test_kyrgyz_letters_count_as_cyrillic():
     assert has_cyrillic("Мен окуучуну өчүрүүнү каалайм") and has_cyrillic("ң")
     assert not has_cyrillic("Hello 4A")
+
+
+def test_the_prompt_tells_the_model_to_follow_the_users_language_not_to_default_to_russian():
+    """Found in the role pass: 'usually Russian' made the model answer English users in Russian (0 of 6 in English)."""
+    from app.agent.prompt import PROMPT
+
+    assert "English if they write English" in PROMPT
+    assert "usually Russian" not in PROMPT
+
+
+def test_the_prompt_explains_russian_name_endings_and_that_a_given_surname_answers_the_question():
+    """Found in the role pass: 'Удалите Амира Жумаева' made the model ask 'which Амир?' in about a third of the runs."""
+    from app.agent.prompt import PROMPT
+
+    assert "Амира" in PROMPT and "Жумаев" in PROMPT
+    assert "the surname decides which namesake is meant" in PROMPT
