@@ -1,0 +1,19 @@
+# Keep the backend image small and free of secrets: only what the backend needs is copied (see Dockerfile).
+.git
+.venv
+.env
+.env.*
+.run
+.claude
+.mypy_cache
+.pytest_cache
+.ruff_cache
+**/__pycache__
+**/*.pyc
+.DS_Store
+mobile
+docs
+loadtest
+scripts
+tests
+monitoring

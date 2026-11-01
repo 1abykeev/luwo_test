@@ -1,0 +1,13 @@
+# The same as prometheus.yml, for the Docker-only setup (docker-compose.app.yml):
+# the backend is a container on the same network, so it is reached by its service name.
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: luwo
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["backend:8000"]
+    # If you set METRICS_TOKEN in .env, add:
+    # authorization:
+    #   credentials: <the same token>

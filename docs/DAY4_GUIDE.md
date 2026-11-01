@@ -12,7 +12,7 @@ proved the architecture claim, tested the real model in depth, and fixed what th
 | A fake model for load tests | `LLM_PROVIDER=fake`: calls real read tools, never changes data | `app/agent/load_script.py` |
 | Architecture proof | Upper layers must import without any database library | `tests/test_layers.py` |
 | Full pass with the real Claude | 20 scenarios across the three roles, checked against the services | `scripts/role_pass.py`, `docs/ROLE_PASS.md` |
-| One-command start | `make up` starts everything and prints the links | `Makefile` |
+| One-command start | `make up` starts everything **in Docker** (only Docker needed) and prints the links | `Makefile`, `Dockerfile`, `docker-compose.app.yml` |
 | Code quality | `ruff` clean, a `ruff.toml`, DB pool size as a setting | `ruff.toml`, `app/config.py` |
 | Review log | Every finding from every review, with its status | `docs/REVIEW_LOG.md` |
 
@@ -102,11 +102,26 @@ what the model says. Using the app by hand and reading the dashboard found more.
 | Latin letters that look like Cyrillic could hide a namesake | Mixed-alphabet names are refused; names are compared with `name_key` |
 | The app label «закрытый класс» suggested a class was shut down | Now «класс вне вашего доступа» |
 
-## 6. `make up`
+## 6. `make up`: the whole project in Docker
 
-`make up` creates the env files, installs packages, starts Docker (database, Prometheus, Grafana), runs the
-migrations, **loads demo data only into an empty database** (the seed script wipes data), starts the backend and the web
-version of the app, and prints the links. `make down` stops everything and keeps the data. `make help` lists the rest.
+`make up` needs **only Docker**. It builds two images, starts five containers (database, backend, the app's web version,
+Prometheus, Grafana), runs the migrations, loads demo data **only into an empty database** (the seed script wipes data), and
+prints the links. `make down` stops everything and keeps the data. `make test` runs the tests inside Docker. `make help`
+lists the rest. The alternative `make local` runs the backend and the app on your own machine (needs Python 3.11+ and Node.js).
+
+| File | What it does |
+|---|---|
+| `Dockerfile` | The backend image (Python 3.12). Packages come from `requirements.lock` (exact versions), installed first so a code change rebuilds fast |
+| `docker/backend-entrypoint.sh` | On start: run the migrations, load demo data if the database is empty (`seed/ensure.py`), start uvicorn |
+| `mobile/Dockerfile`, `mobile/nginx.conf` | Builds the app's web version once (`expo export`, Node 22, `package-lock.json`) and serves it with nginx; `EXPO_PUBLIC_DEMO_MODE=true` is baked in on purpose |
+| `docker-compose.app.yml` | Used **together with** `docker-compose.yml`: adds the backend and the app as containers and points Prometheus at the backend container |
+| `monitoring/prometheus.docker.yml` | The same as `prometheus.yml`, but the target is `backend:8000` (a container) and not `host.docker.internal` |
+
+Details worth knowing: inside Docker the database is `db:5432` (not `localhost:5433`); the Anthropic key comes from your
+`.env` through `env_file`, and the file itself is never copied into an image; the Docker mode serves the web version of the
+app only (the iOS simulator and Expo Go need `make mobile`, which needs Node.js). One safety detail: stopping the apps
+kills only processes that are ours (uvicorn, expo, node), because in Docker mode the port is held by Docker's own forwarding
+process.
 
 ## 7. Files to open yourself
 
@@ -157,6 +172,11 @@ broke English. The scripted tests pass by design, so I added a role pass that ch
 **Why did you put the off-topic rule in the tool description and not in the prompt?**
 Editing the prompt fixed it but broke English replies (20/20 to 0/20). I measured prompt variants and a tool-description
 variant side by side; the tool description kept both behaviors (58/60 and 23/24).
+
+**Why two compose files?**
+`docker-compose.yml` is the base: the database and optional monitoring. It supports running the backend on your machine
+(`make local`). `docker-compose.app.yml` adds the backend and the app as containers and replaces one setting (where Prometheus
+looks). Keeping them separate means the local way does not change and the Docker-only way is opt-in.
 
 **What would you do next?**
 A rate limit at the proxy, several workers with a shared lock, fewer SQL statements per request, a list of past chats in

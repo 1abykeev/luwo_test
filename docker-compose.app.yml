@@ -1,0 +1,35 @@
+# The whole project in Docker: you need nothing installed except Docker. Use it TOGETHER with docker-compose.yml:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.app.yml --profile observability up -d --build --wait
+#
+# (or simply: make up). It adds the backend and the app's web version as containers and points Prometheus
+# at the backend container. `make local` (backend and app on your machine) does not use this file.
+services:
+  backend:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    # ANTHROPIC_API_KEY and the other settings come from your .env (the file is never copied into the image)
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # Inside the Docker network the database is "db" on its normal port, not localhost:5433
+      DATABASE_URL: postgresql+asyncpg://luwo:luwo@db:5432/luwo
+    ports:
+      - "127.0.0.1:8000:8000"
+
+  mobile:
+    build:
+      context: ./mobile
+      args:
+        EXPO_PUBLIC_API_URL: http://localhost:8000
+        EXPO_PUBLIC_DEMO_MODE: "true"
+    ports:
+      - "127.0.0.1:8081:80"
+
+  prometheus:
+    volumes:
+      # Replaces the config mounted in docker-compose.yml (same path inside the container)
+      - ./monitoring/prometheus.docker.yml:/etc/prometheus/prometheus.yml:ro
