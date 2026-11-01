@@ -9,6 +9,9 @@ TYPE_PRIORITY = [
     "missing_student", "duplicate", "search", "show",
 ]
 
+# Every request_type classify() can return: the ones above, plus these two (no tool, or only confirm/cancel)
+ALL_REQUEST_TYPES = (*TYPE_PRIORITY, "confirmation", "other")
+
 OUTCOMES = ("resolved", "permission_denied", "needs_clarification", "out_of_scope", "error")
 
 

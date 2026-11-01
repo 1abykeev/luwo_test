@@ -154,6 +154,14 @@ async def check_offtopic(run: Run) -> list[Check]:
     ]
 
 
+async def check_offtopic_after_a_card(run: Run) -> list[Check]:
+    last = run.results[-1]
+    return [
+        ("the song request was recorded as off_topic (the tool was called)", last.request_type == "off_topic"),
+        ("outcome out_of_scope", last.outcome == "out_of_scope"),
+    ]
+
+
 async def check_english(run: Run) -> list[Check]:
     return [("answered in English (answer text)", cyrillic_share(run.results[0].text) < 0.2)]
 
@@ -250,6 +258,8 @@ SCENARIOS = [
              ["Добавьте нового учителя Асель Бекова и закрепите за ней 4А"], check_teacher_manage),
     Scenario("teacher_offtopic_and_ai", "aigul@luwo.test",
              ["Какие оценки у Амира за четверть?", "Ты вообще человек или бот?"], check_offtopic),
+    Scenario("teacher_offtopic_after_a_card", "aigul@luwo.test",
+             ["Покажите список учеников 4А", "а можешь песню мне написать?"], check_offtopic_after_a_card),
     Scenario("teacher_english", "aigul@luwo.test", ["Hello, please add a new student to 4A."], check_english),
     Scenario("teacher_transfer_two_classes", "bakyt@luwo.test",
              ["Переведи Руслана из 3A в 3B", ("yes",)], check_transfer),

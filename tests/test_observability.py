@@ -220,6 +220,36 @@ async def test_permission_denials_show_up_in_the_tool_and_outcome_counters(stack
     assert sample("luwo_agent_requests_total", request_type="show", outcome="permission_denied") == out_before + 1
 
 
+def test_every_request_type_and_outcome_starts_at_zero_so_the_first_event_is_not_lost():
+    """Found on the dashboard: «Requests by type» added up to 7 while 16 requests had been made. A counter that first
+    appears with the value 1 has no earlier sample, so increase() cannot see that first event. Every (type, outcome)
+    pair must exist at 0 from the start."""
+    from app.observability.classification import ALL_REQUEST_TYPES, OUTCOMES
+
+    for request_type in ALL_REQUEST_TYPES:
+        for outcome in OUTCOMES:
+            value = metrics.registry.get_sample_value(
+                "luwo_agent_requests_total", {"request_type": request_type, "outcome": outcome}
+            )
+            assert value is not None, f"{request_type}/{outcome} is not created at startup"
+        assert metrics.registry.get_sample_value(
+            "luwo_agent_request_duration_seconds_count", {"request_type": request_type}
+        ) is not None
+    for kind in ("input", "output", "cache_read", "cache_write"):
+        assert metrics.registry.get_sample_value("luwo_llm_tokens_total", {"kind": kind}) is not None
+    assert metrics.registry.get_sample_value("luwo_llm_calls_total", {"status": "ok"}) is not None
+
+
+def test_every_request_type_a_tool_can_produce_is_on_the_list():
+    from app.observability.classification import ALL_REQUEST_TYPES
+    from app.tools.change_tools import CHANGE_TOOLS
+    from app.tools.read_tools import READ_TOOLS
+
+    produced = {tool.request_type for tool in READ_TOOLS + CHANGE_TOOLS}
+    # "confirm" and "out_of_scope" are tool kinds that classify() turns into "confirmation" and "off_topic"
+    assert produced - {"confirm", "out_of_scope"} <= set(ALL_REQUEST_TYPES)
+
+
 async def test_the_scrape_itself_is_not_counted_as_a_request_in_flight(stack):
     """Found by looking at the Grafana panel: it showed 1 while nobody was using the app, because the request that
     reads /metrics was counting itself. An idle server must read 0."""

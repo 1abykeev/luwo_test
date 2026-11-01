@@ -14,6 +14,8 @@ from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, Counter, G
 from prometheus_client.core import CounterMetricFamily, GaugeMetricFamily
 from starlette.datastructures import MutableHeaders
 
+from .classification import ALL_REQUEST_TYPES, OUTCOMES
+
 registry = CollectorRegistry()
 
 # seconds
@@ -47,10 +49,21 @@ llm_call_seconds = Histogram(
 llm_tokens_total = Counter(
     "luwo_llm_tokens_total", "Model tokens by kind: input, output, cache_read, cache_write", ["kind"], registry=registry
 )
+
 request_tokens = Histogram(
     "luwo_request_tokens", "Model tokens (all kinds) used by one chat request",
     buckets=(250, 500, 1000, 2500, 5000, 10000, 20000, 50000), registry=registry,
 )
+
+# Create the known label combinations at 0 right away. A counter that first shows up with the value 1 has no earlier
+# sample, so Prometheus' increase() and rate() never see that first event and dashboards undercount by one per pair.
+for _request_type in ALL_REQUEST_TYPES:
+    agent_request_seconds.labels(_request_type)
+    for _outcome in OUTCOMES:
+        agent_requests_total.labels(_request_type, _outcome)
+for _kind in ("input", "output", "cache_read", "cache_write"):
+    llm_tokens_total.labels(_kind)
+llm_calls_total.labels("ok")
 
 tool_calls_total = Counter("luwo_tool_calls_total", "Tool calls by tool and result", ["tool", "result"], registry=registry)
 tool_seconds = Histogram(

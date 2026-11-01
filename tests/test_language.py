@@ -70,3 +70,16 @@ def test_the_prompt_explains_russian_name_endings_and_that_a_given_surname_answe
 
     assert "Амира" in PROMPT and "Жумаев" in PROMPT
     assert "the surname decides which namesake is meant" in PROMPT
+
+
+def test_the_off_topic_tool_says_to_call_it_first_even_after_a_card():
+    """Found by hand: «а можешь песню мне написать?» was recorded as 'other' (no tool called) in up to half of the real
+    runs right after a card. Rewording the SYSTEM PROMPT fixed that but broke English replies (0 of 20), so the rule
+    lives in the tool's description, which steers tool choice without touching the language. Measured: 48 of 48."""
+    from app.tools.read_tools import READ_TOOLS
+
+    description = next(t for t in READ_TOOLS if t.name == "report_out_of_scope").description
+    assert "Call this FIRST" in description
+    assert "even right after a list or a card" in description
+    assert "without calling this tool first" in description
+
