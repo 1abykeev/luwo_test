@@ -119,3 +119,4 @@ block of new lines. The main agent appends them here after the review and later 
 ## Manual testing (2026-11-01)
 
 - [2026-11-01] [nice] [mobile] Card label «закрытый класс» suggested a class that was shut down; it only means a class outside the teacher's access — status: fixed — now «Переведён в класс вне вашего доступа» (badge and timeline); chips may wrap on narrow phones; 89 mobile tests; the design decision (destination class hidden from teachers) is in README limitations
+- [2026-11-01] [nice] [backend] Grafana «Requests in flight» showed 1 on an idle server: the /metrics scrape counted itself in the gauge (only counters and logs skipped probes) — status: fixed — probes (/metrics, /health) are not counted in flight; test reads the gauge during a scrape; found while looking at the dashboard by hand

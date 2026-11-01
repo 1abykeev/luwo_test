@@ -121,7 +121,11 @@ class MetricsMiddleware:
         structlog.contextvars.bind_contextvars(request_id=request_id)
         started = time.perf_counter()
         status = 500
-        http_in_flight.inc()
+        # A probe is not "work": the request that reads /metrics would otherwise count itself and the gauge
+        # could never show 0 while Prometheus is scraping.
+        counted_in_flight = scope["path"] not in IGNORED_ROUTES
+        if counted_in_flight:
+            http_in_flight.inc()
 
         async def send_with_id(message):
             nonlocal status
@@ -133,7 +137,8 @@ class MetricsMiddleware:
         try:
             await self.app(scope, receive, send_with_id)
         finally:
-            http_in_flight.dec()
+            if counted_in_flight:
+                http_in_flight.dec()
             elapsed = time.perf_counter() - started
             route = getattr(scope.get("route"), "path", None) or ("docs" if scope["path"] in DOC_PATHS else "unmatched")
             # (the label is the route template, never the raw URL)

@@ -6,7 +6,7 @@ AI-агент, который через обычный чат помогает 
 
 > **Статус: готово.** Backend и агент на Claude, PostgreSQL с тестовыми
 > данными, адаптеры данных, мобильное приложение (React Native), аналитика запросов, структурные логи,
-> метрики Prometheus и дашборд Grafana, 467 тестов backend и 89 тестов приложения. Нагрузочные тесты с поддельной моделью и малый прогон на настоящем Claude сделаны
+> метрики Prometheus и дашборд Grafana, 468 тестов backend и 89 тестов приложения. Нагрузочные тесты с поддельной моделью и малый прогон на настоящем Claude сделаны
 > (раздел «Мощность и нагрузочные тесты»).
 
 ![Вход](docs/screenshots/login.png) ![Список класса](docs/screenshots/class-list.png)
@@ -131,7 +131,7 @@ python -m scripts.try_agent --demo             # набор готовых ди�
 | `app/observability/` | классификация запросов, журнал запросов и аналитика, структурные логи, метрики Prometheus |
 | `monitoring/` | конфигурация Prometheus и Grafana, готовый дашборд |
 | `mobile/` | мобильное приложение: чат, карточки, подтверждение ([mobile/README.md](mobile/README.md)) |
-| `tests/` | 467 тестов backend (приложение: 89 тестов в `mobile/`) |
+| `tests/` | 468 тестов backend (приложение: 89 тестов в `mobile/`) |
 
 ### Как заменить источник данных (REST или MCP Luwo)
 
@@ -381,7 +381,7 @@ loadtest/run_all_fake.sh                          # все семь шагов (
 ## Тесты
 
 ```bash
-python -m pytest                 # 467 тестов; PostgreSQL-варианты пропускаются, если база не запущена
+python -m pytest                 # 468 тестов; PostgreSQL-варианты пропускаются, если база не запущена
 python -m pytest -m live         # 1 тест с настоящим Claude (стоит доли цента)
 ruff check app tests seed loadtest scripts   # стиль и мелкие ошибки (настройки в ruff.toml); чисто
 ```

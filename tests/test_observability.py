@@ -220,6 +220,14 @@ async def test_permission_denials_show_up_in_the_tool_and_outcome_counters(stack
     assert sample("luwo_agent_requests_total", request_type="show", outcome="permission_denied") == out_before + 1
 
 
+async def test_the_scrape_itself_is_not_counted_as_a_request_in_flight(stack):
+    """Found by looking at the Grafana panel: it showed 1 while nobody was using the app, because the request that
+    reads /metrics was counting itself. An idle server must read 0."""
+    response = await (await stack.client()).get("/metrics")
+    in_flight = re.search(r"^luwo_http_requests_in_flight (\S+)", response.text, re.M)
+    assert in_flight and float(in_flight.group(1)) == 0.0
+
+
 async def test_the_metrics_endpoint_serves_prometheus_text_with_memory_and_cpu(stack):
     response = await (await stack.client()).get("/metrics")
     assert response.status_code == 200 and response.headers["content-type"].startswith("text/plain")
