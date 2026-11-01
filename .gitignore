@@ -40,3 +40,6 @@ loadtest/results/*.html
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# Local Claude Code settings inside the mobile app (a plugin switch, not project code)
+mobile/.claude/

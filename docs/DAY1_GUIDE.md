@@ -1,5 +1,7 @@
 # Day 1 guide: what was built and where
 
+> **Historical note.** Written at the end of Day 1 as a reading guide. Counts, file locations and some behavior changed later; the README is the source of truth.
+
 A reading guide for the foundation of the Luwo list-support agent. Read the sections in order, then open the files they name.
 
 ## 1. The big picture

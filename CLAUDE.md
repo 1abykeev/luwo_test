@@ -2,14 +2,14 @@
 
 Project context and working rules for Claude Code. Read this first in every session.
 
-## Who I'm working with
+## About this project
 
-Aktan, junior backend/AI engineer in Bishkek, Kyrgyzstan. Third hiring round at Luwo (ed-tech, school management platform). This is a take-home task. Aktan told the company they need **4 days**, with an **interim version at the end of day 2**.
+Take-home task for Luwo (ed-tech, school management platform), built by Aktan in 4 days, with an interim version at the end of day 2.
 
-- Aktan must understand and be able to explain every part in a follow-up interview.
+- The author must understand and be able to explain every part in a follow-up interview.
 - Keep code clean, simple, well-structured. Explain important design decisions briefly as we go.
 - Speak plain, simple English. No jargon without a one-line explanation.
-- AI tools are allowed by the company.
+- AI tools are allowed by the company; this repo was built with Claude Code, and the review process is in `.claude/` and `docs/REVIEW_LOG.md`.
 
 ## The task (summary of docs/Тестовое_задание_агент_поддержки_списков.pdf)
 
@@ -197,6 +197,9 @@ Claude: at each trigger below, tell Aktan "time to check deferred item X" before
 #1 honest text after model failure, #2 fake button results (structural fix + prompt rule, measured 12/12), #3 namesake token (key, conversation, expiry) and confirm bound to conversation, #4 per-conversation lock + DB row lock, #5 bcrypt in a thread, #6 secret guard (`APP_ENV`), #15a overall request deadline. Closed after checking: #9 (false alarm, test added), #13 (works, measured). Tests: 331.
 
 ### Day 3 status (done)
-Mobile app (Expo SDK 58, Expo Router, 88 tests, lint and types clean), analytics endpoint, structured logs, Prometheus metrics, Grafana dashboard (24 panels, all queries verified on real data), DAY3_GUIDE. Backend tests: 418 (462 after Day 4 work). Prompt tuned from real UI screenshots (language, picker, no repeated lists, rights questions); language guard in `app/agent/language.py`.
+Mobile app (Expo SDK 58, Expo Router, 88 tests, lint and types clean), analytics endpoint, structured logs, Prometheus metrics, Grafana dashboard (24 panels, all queries verified on real data), DAY3_GUIDE. Backend tests: 418 (467 after Day 4 work). Prompt tuned from real UI screenshots (language, picker, no repeated lists, rights questions); language guard in `app/agent/language.py`.
 Verified by Aktan by hand on the iOS simulator (iPhone 17, Expo Go): login, class list, 'where did she go' card. Android not tried. All flows were verified in the browser build.
-Day 4 reminders still open: #7, #8, #12, #14, #15b, R1, L1 (see the table above). Numbers to carry into Day 4: ~12k tokens per chat request, 98% cache share when warm, agent p50 ~2.5 s / p95 ~4.7 s in a short warm-up, RSS ~160 MB.
+Numbers carried into Day 4: ~12k tokens per chat request, 98% cache share when warm, agent p50 ~2.5 s / p95 ~4.7 s in a short warm-up, RSS ~160 MB.
+
+### Day 4 status (done)
+Measured capacity (fake model, real Claude run) in the README, configurable DB pool, `ruff.toml`, layer-boundary test (`tests/test_layers.py`), full role pass with the real Claude (`scripts/role_pass.py`, 19 scenarios, results in `docs/ROLE_PASS.md`), final code review (`docs/REVIEW_LOG.md`). Deferred item #8 (N+1) was left as is: the database is not the bottleneck (documented).

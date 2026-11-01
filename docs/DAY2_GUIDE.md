@@ -1,5 +1,7 @@
 # Day 2 guide: the agent, tools and chat API
 
+> **Historical note.** Written at the end of Day 2 as a reading guide. Counts, file locations and some behavior changed later; the README is the source of truth.
+
 A reading guide for what was added on Day 2. Read Day 1's guide first (`DAY1_GUIDE.md`): everything here sits on top of those services.
 
 ## 1. The big picture

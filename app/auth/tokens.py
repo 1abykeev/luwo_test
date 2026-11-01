@@ -23,8 +23,11 @@ def create_token(user_id: int) -> str:
 
 def read_token(token: str) -> int:
     try:
-        # algorithms is pinned, so a token claiming "alg: none" is rejected; "exp" is checked here too
-        payload = jwt.decode(token, settings.jwt_secret, algorithms=[ALGORITHM])
+        # algorithms is pinned, so a token claiming "alg: none" is rejected. "exp" and "sub" are required:
+        # by default PyJWT accepts a correctly signed token that has no expiry at all.
+        payload = jwt.decode(
+            token, settings.jwt_secret, algorithms=[ALGORITHM], options={"require": ["exp", "sub"]}
+        )
         return int(payload["sub"])
     except (jwt.PyJWTError, KeyError, ValueError):
         raise AuthenticationFailed("Invalid or expired token") from None

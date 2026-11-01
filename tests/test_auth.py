@@ -148,3 +148,33 @@ async def test_login_does_not_block_the_event_loop(client):
     longest_freeze = max(b - a for a, b in zip(ticks, ticks[1:], strict=False))
     assert login_time > 0.05, "bcrypt should take noticeable time, otherwise this test proves nothing"
     assert longest_freeze < 0.05, f"the event loop froze for {longest_freeze:.3f}s during login"
+
+
+# ---- review: a token without an expiry must not be accepted, even when it is signed with our secret ----
+
+def test_a_token_without_an_expiry_is_rejected():
+    import jwt
+
+    from app.auth.tokens import ALGORITHM, read_token
+    from app.config import settings
+    from app.domain.errors import AuthenticationFailed
+
+    forever = jwt.encode({"sub": "6"}, settings.jwt_secret, algorithm=ALGORITHM)  # signed correctly, never expires
+    with pytest.raises(AuthenticationFailed):
+        read_token(forever)
+
+
+def test_a_token_without_a_subject_is_rejected():
+    from datetime import UTC, datetime, timedelta
+
+    import jwt
+
+    from app.auth.tokens import ALGORITHM, read_token
+    from app.config import settings
+    from app.domain.errors import AuthenticationFailed
+
+    anonymous = jwt.encode(
+        {"exp": datetime.now(UTC) + timedelta(minutes=5)}, settings.jwt_secret, algorithm=ALGORITHM
+    )
+    with pytest.raises(AuthenticationFailed):
+        read_token(anonymous)

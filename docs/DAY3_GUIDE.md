@@ -1,5 +1,7 @@
 # Day 3 guide: the mobile app, analytics, logs and metrics
 
+> **Historical note.** Written at the end of Day 3 as a reading guide. Counts, file locations and some behavior changed later; the README is the source of truth.
+
 Read `DAY1_GUIDE.md` and `DAY2_GUIDE.md` first. Day 3 added two things on top of them: a phone app, and the
 ability to see what the agent does (analytics, logs, metrics).
 
